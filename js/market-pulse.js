@@ -1,14 +1,42 @@
 /* =========================================================
    MARKET PULSE
+   Data source: StockScanner.marketService
    ========================================================= */
 
 StockScanner.marketPulse = {
 
-    init() {
+    async init() {
 
-        const data =
-            StockScanner.data.marketPulse;
+        try {
 
+            const data =
+                await StockScanner.marketService
+                    .getMarketPulse();
+
+            this.render(data);
+
+            this.setStatus(
+                StockScanner.marketService.isLive()
+                    ? "LIVE"
+                    : "DEMO"
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                "[Market Pulse]",
+                error
+            );
+
+            this.setStatus("ERROR");
+
+        }
+
+    },
+
+
+    render(data) {
 
         const items =
             document.querySelectorAll(
@@ -24,7 +52,6 @@ StockScanner.marketPulse = {
             const value =
                 item.querySelector("strong");
 
-
             if (!label || !value) {
                 return;
             }
@@ -39,22 +66,28 @@ StockScanner.marketPulse = {
                 const market =
                     data[name];
 
-
                 value.innerHTML = `
-                    ${market.price.toFixed(2)}
+
+                    ${Number(
+                        market.price
+                    ).toFixed(2)}
+
                     <span class="
                         ${
                             market.change >= 0
-                            ? "positive"
-                            : "negative"
+                                ? "positive"
+                                : "negative"
                         }
                     ">
                         ${
                             market.change >= 0
-                            ? "+"
-                            : ""
+                                ? "+"
+                                : ""
                         }
-                        ${market.change.toFixed(2)}%
+
+                        ${Number(
+                            market.change
+                        ).toFixed(2)}%
                     </span>
                 `;
 
@@ -64,7 +97,8 @@ StockScanner.marketPulse = {
             if (name === "ADV / DEC") {
 
                 value.textContent =
-                    data.advanceDecline;
+                    data.advanceDecline ||
+                    "---";
 
             }
 
@@ -74,7 +108,41 @@ StockScanner.marketPulse = {
             ) {
 
                 value.textContent =
-                    data.leadingSector;
+                    data.leadingSector ||
+                    "---";
+
+            }
+
+        });
+
+    },
+
+
+    setStatus(status) {
+
+        const elements =
+            document.querySelectorAll(
+                "#systemStatus span"
+            );
+
+        elements.forEach(element => {
+
+            if (
+                element.textContent
+                    .trim()
+                    .startsWith("MARKET")
+            ) {
+
+                const indicator =
+                    element.querySelector("b");
+
+                indicator.textContent =
+                    status;
+
+                indicator.className =
+                    status === "ERROR"
+                        ? "status-off"
+                        : "status-ready";
 
             }
 
