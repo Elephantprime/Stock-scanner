@@ -40,6 +40,45 @@
 
 
   <!-- ======================================================
+       TICKER SEARCH
+  ======================================================= -->
+
+  <section class="ticker-search-bar">
+
+    <div class="ticker-search-wrapper">
+
+      <span class="ticker-search-icon">
+        ⌕
+      </span>
+
+      <input
+        id="tickerSearch"
+        type="text"
+        placeholder="Search ticker or company..."
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        aria-label="Search ticker or company"
+      >
+
+      <button
+        id="tickerSearchButton"
+        type="button"
+        class="ticker-search-button">
+        SEARCH
+      </button>
+
+      <div
+        id="tickerSearchResults"
+        class="ticker-search-results hidden">
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ======================================================
        MARKET PULSE
   ======================================================= -->
 
@@ -205,8 +244,6 @@
       </div>
 
 
-      <!-- Scanner filter summary -->
-
       <div id="activeScanSummary"
            class="scan-summary">
 
@@ -217,8 +254,6 @@
 
       </div>
 
-
-      <!-- Scanner table -->
 
       <div class="table-wrapper">
 
@@ -721,7 +756,8 @@
      1. Demo/fallback data
      2. Market service abstraction
      3. Feature modules
-     4. Main application controller
+     4. Search module
+     5. Main application controller
 ========================================================= -->
 
 <script src="data/demo-data.js"></script>
@@ -737,8 +773,11 @@
 <script src="js/patterns.js"></script>
 <script src="js/market-pulse.js"></script>
 
+<!-- Ticker search -->
+<script src="js/search.js"></script>
+
 <!-- Load controller last -->
 <script src="js/app.js"></script>
 
 </body>
-  </html>
+</html>
