@@ -7,9 +7,15 @@
    The UI NEVER needs to know which market-data provider
    is being used.
 
-   Modes:
-   DEMO = use demo-data.js
-   LIVE = use our protected /api/* endpoints
+   HYBRID MODE:
+   Each service can independently use LIVE or DEMO data.
+
+   Current configuration:
+   - Quotes       = LIVE
+   - Candles      = DEMO
+   - Movers       = DEMO
+   - Market Pulse = DEMO
+   - News         = DEMO
    ========================================================= */
 
 window.StockScanner = window.StockScanner || {};
@@ -21,7 +27,16 @@ StockScanner.marketService = {
        CONFIGURATION
     ----------------------------------------------------- */
 
-    mode: "LIVE",
+    mode: "HYBRID",
+
+    liveServices: {
+        quotes: true,
+        candles: false,
+        movers: false,
+        marketPulse: false,
+        news: false
+    },
+
 
     endpoints: {
 
@@ -52,7 +67,8 @@ StockScanner.marketService = {
 
         if (
             normalized !== "DEMO" &&
-            normalized !== "LIVE"
+            normalized !== "LIVE" &&
+            normalized !== "HYBRID"
         ) {
 
             console.error(
@@ -67,6 +83,40 @@ StockScanner.marketService = {
         this.mode = normalized;
 
 
+        /*
+         DEMO turns every live service off.
+         LIVE turns every live service on.
+         HYBRID preserves individual service settings.
+        */
+
+        if (normalized === "DEMO") {
+
+            Object.keys(
+                this.liveServices
+            ).forEach(key => {
+
+                this.liveServices[key] =
+                    false;
+
+            });
+
+        }
+
+
+        if (normalized === "LIVE") {
+
+            Object.keys(
+                this.liveServices
+            ).forEach(key => {
+
+                this.liveServices[key] =
+                    true;
+
+            });
+
+        }
+
+
         console.log(
             `[MarketService] Mode: ${this.mode}`
         );
@@ -77,9 +127,42 @@ StockScanner.marketService = {
     },
 
 
-    isLive() {
+    /* -----------------------------------------------------
+       Determine whether a specific service is live.
 
-        return this.mode === "LIVE";
+       Examples:
+
+       isLive("quotes")
+       isLive("news")
+
+       Calling isLive() with no service returns true if
+       ANY service is currently live.
+    ----------------------------------------------------- */
+
+    isLive(service = null) {
+
+        if (this.mode === "DEMO") {
+            return false;
+        }
+
+
+        if (this.mode === "LIVE") {
+            return true;
+        }
+
+
+        if (service) {
+
+            return Boolean(
+                this.liveServices?.[service]
+            );
+
+        }
+
+
+        return Object.values(
+            this.liveServices || {}
+        ).some(Boolean);
 
     },
 
@@ -103,9 +186,15 @@ StockScanner.marketService = {
         }
 
 
-        if (!this.isLive()) {
+        /*
+         Quotes are currently LIVE.
+        */
 
-            return this.getDemoQuote(symbol);
+        if (!this.isLive("quotes")) {
+
+            return this.getDemoQuote(
+                symbol
+            );
 
         }
 
@@ -140,7 +229,11 @@ StockScanner.marketService = {
         }
 
 
-        if (!this.isLive()) {
+        /*
+         Candles remain DEMO until /api/candles exists.
+        */
+
+        if (!this.isLive("candles")) {
 
             return this.getDemoCandles(
                 symbol,
@@ -176,7 +269,12 @@ StockScanner.marketService = {
 
     async getMovers(options = {}) {
 
-        if (!this.isLive()) {
+        /*
+         Scanner universe remains DEMO until
+         /api/movers exists.
+        */
+
+        if (!this.isLive("movers")) {
 
             return this.getDemoMovers(
                 options
@@ -229,7 +327,12 @@ StockScanner.marketService = {
 
     async getMarketPulse() {
 
-        if (!this.isLive()) {
+        /*
+         Market Pulse remains DEMO until
+         /api/market exists.
+        */
+
+        if (!this.isLive("marketPulse")) {
 
             return this.getDemoMarketPulse();
 
@@ -251,7 +354,11 @@ StockScanner.marketService = {
         options = {}
     ) {
 
-        if (!this.isLive()) {
+        /*
+         News remains DEMO until /api/news exists.
+        */
+
+        if (!this.isLive("news")) {
 
             return this.getDemoMarketNews(
                 options
@@ -320,7 +427,7 @@ StockScanner.marketService = {
         }
 
 
-        if (!this.isLive()) {
+        if (!this.isLive("news")) {
 
             return this.getDemoTickerNews(
                 symbol,
@@ -352,13 +459,12 @@ StockScanner.marketService = {
 
        Every live request passes through here.
 
-       This gives us ONE place for:
+       Gives us one place for:
        - HTTP errors
        - JSON errors
        - timeouts
-       - future authentication
        - logging
-       - retry logic
+       - retry logic later
     ===================================================== */
 
     async request(
@@ -422,21 +528,33 @@ StockScanner.marketService = {
                         errorData.error
                     ) {
 
+                        /*
+                         Ensure we never throw [object Object].
+                        */
+
                         message =
-                            errorData.error;
+                            typeof errorData.error ===
+                            "string"
+                                ? errorData.error
+                                : JSON.stringify(
+                                    errorData.error
+                                  );
 
                     }
 
                 }
                 catch (_) {
 
-                    /* Ignore malformed
-                       error response */
+                    /*
+                     Ignore malformed error response.
+                    */
 
                 }
 
 
-                throw new Error(message);
+                throw new Error(
+                    message
+                );
 
             }
 
@@ -467,7 +585,9 @@ StockScanner.marketService = {
         }
         finally {
 
-            clearTimeout(timeout);
+            clearTimeout(
+                timeout
+            );
 
         }
 
@@ -500,9 +620,10 @@ StockScanner.marketService = {
        DEMO PROVIDER
 
        These functions make demo-data.js behave like a
-       real API.
+       market-data provider.
 
-       Later LIVE mode returns data in these SAME shapes.
+       Live endpoints will eventually return these same
+       normalized data structures.
     ===================================================== */
 
 
@@ -554,12 +675,22 @@ StockScanner.marketService = {
                 stock.volatility,
 
             timestamp:
-                Date.now()
+                Date.now(),
+
+            source:
+                "demo",
+
+            feed:
+                "demo"
 
         });
 
     },
 
+
+    /* =====================================================
+       DEMO MOVERS
+    ===================================================== */
 
     getDemoMovers() {
 
@@ -601,10 +732,16 @@ StockScanner.marketService = {
             );
 
 
-        return Promise.resolve(movers);
+        return Promise.resolve(
+            movers
+        );
 
     },
 
+
+    /* =====================================================
+       DEMO MARKET PULSE
+    ===================================================== */
 
     getDemoMarketPulse() {
 
@@ -614,6 +751,10 @@ StockScanner.marketService = {
 
     },
 
+
+    /* =====================================================
+       DEMO MARKET NEWS
+    ===================================================== */
 
     getDemoMarketNews(
         options = {}
@@ -639,10 +780,16 @@ StockScanner.marketService = {
         }
 
 
-        return Promise.resolve(news);
+        return Promise.resolve(
+            news
+        );
 
     },
 
+
+    /* =====================================================
+       DEMO TICKER NEWS
+    ===================================================== */
 
     getDemoTickerNews(
         symbol
@@ -655,19 +802,21 @@ StockScanner.marketService = {
             );
 
 
-        return Promise.resolve(news);
+        return Promise.resolve(
+            news
+        );
 
     },
 
 
-    /* -----------------------------------------------------
+    /* =====================================================
        DEMO CANDLES
 
        Temporary generated candles solely for exercising
        the chart interface.
 
        These are NOT historical market prices.
-    ----------------------------------------------------- */
+    ===================================================== */
 
     getDemoCandles(
         symbol,
@@ -684,12 +833,15 @@ StockScanner.marketService = {
 
         if (!stock) {
 
-            return Promise.resolve([]);
+            return Promise.resolve(
+                []
+            );
 
         }
 
 
         const candles = [];
+
 
         const count =
             Math.min(
@@ -722,8 +874,10 @@ StockScanner.marketService = {
         ) {
 
             /*
-             Deterministic-looking demo movement.
-             We don't use this for actual analysis.
+             Deterministic demo movement.
+
+             This exists ONLY for chart-development
+             purposes and is not used as real analysis.
             */
 
             const wave =
@@ -791,7 +945,8 @@ StockScanner.marketService = {
             });
 
 
-            price = close;
+            price =
+                close;
 
         }
 
@@ -802,6 +957,10 @@ StockScanner.marketService = {
 
     },
 
+
+    /* =====================================================
+       TIMEFRAME CONVERSION
+    ===================================================== */
 
     timeframeToMilliseconds(
         timeframe
