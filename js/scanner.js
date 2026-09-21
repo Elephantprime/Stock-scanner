@@ -1,8 +1,11 @@
 /* =========================================================
    MARKET SCANNER
+   Data source: StockScanner.marketService
    ========================================================= */
 
 StockScanner.scanner = {
+
+    stocks: [],
 
     settings: {
         minimumPrice: null,
@@ -14,13 +17,46 @@ StockScanner.scanner = {
     },
 
 
-    init() {
-
-        this.render(
-            StockScanner.data.stocks
-        );
+    async init() {
 
         this.bindSettings();
+
+        await this.refresh();
+
+    },
+
+
+    async refresh() {
+
+        try {
+
+            const stocks =
+                await StockScanner.marketService.getMovers();
+
+            this.stocks =
+                Array.isArray(stocks)
+                    ? stocks
+                    : [];
+
+            this.applyFilters();
+
+            this.setStatus("READY");
+
+        }
+        catch (error) {
+
+            console.error(
+                "[Scanner]",
+                error
+            );
+
+            this.setStatus("ERROR");
+
+            this.renderError(
+                error.message
+            );
+
+        }
 
     },
 
@@ -28,7 +64,9 @@ StockScanner.scanner = {
     render(stocks) {
 
         const body =
-            document.getElementById("scannerResults");
+            document.getElementById(
+                "scannerResults"
+            );
 
         body.innerHTML = "";
 
@@ -53,7 +91,6 @@ StockScanner.scanner = {
             const row =
                 document.createElement("tr");
 
-
             row.dataset.symbol =
                 stock.symbol;
 
@@ -61,44 +98,59 @@ StockScanner.scanner = {
             row.innerHTML = `
 
                 <td>
-                    <strong>${stock.symbol}</strong>
+                    <strong>
+                        ${stock.symbol}
+                    </strong>
                 </td>
 
                 <td>
-                    $${stock.price.toFixed(2)}
+                    $${Number(stock.price).toFixed(2)}
                 </td>
 
                 <td class="
-                    ${stock.change >= 0
-                        ? "positive"
-                        : "negative"}
+                    ${
+                        stock.changePercent >= 0
+                            ? "positive"
+                            : "negative"
+                    }
                 ">
-                    ${stock.change >= 0 ? "+" : ""}
-                    ${stock.change.toFixed(2)}%
+                    ${
+                        stock.changePercent >= 0
+                            ? "+"
+                            : ""
+                    }
+                    ${Number(
+                        stock.changePercent
+                    ).toFixed(2)}%
                 </td>
 
                 <td>
-                    ${stock.relativeVolume.toFixed(1)}×
+                    ${
+                        stock.relativeVolume != null
+                            ? Number(
+                                stock.relativeVolume
+                              ).toFixed(1) + "×"
+                            : "---"
+                    }
                 </td>
 
                 <td>
-                    ${StockScanner.ticker.formatVolume(
+                    ${this.formatVolume(
                         stock.volume
                     )}
                 </td>
 
                 <td class="accent">
-                    ${stock.setup}
+                    ${stock.setup || "---"}
                 </td>
 
                 <td>
-                    ${stock.catalyst}
+                    ${stock.catalyst || "---"}
                 </td>
 
                 <td>
-                    ${stock.setupStatus}
+                    ${stock.setupStatus || "---"}
                 </td>
-
             `;
 
 
@@ -121,15 +173,33 @@ StockScanner.scanner = {
     },
 
 
+    renderError(message) {
+
+        const body =
+            document.getElementById(
+                "scannerResults"
+            );
+
+        body.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="8">
+                    Scanner unavailable:
+                    ${message}
+                </td>
+            </tr>
+        `;
+
+    },
+
+
     bindSettings() {
 
-        const apply =
+        const button =
             document.getElementById(
                 "applyScanSettings"
             );
 
-
-        apply.addEventListener(
+        button.addEventListener(
             "click",
             () => {
 
@@ -147,8 +217,11 @@ StockScanner.scanner = {
 
     readNumber(id) {
 
+        const element =
+            document.getElementById(id);
+
         const value =
-            document.getElementById(id).value;
+            element.value;
 
         if (value === "") {
             return null;
@@ -162,13 +235,19 @@ StockScanner.scanner = {
     readSettings() {
 
         this.settings.minimumPrice =
-            this.readNumber("minimumPrice");
+            this.readNumber(
+                "minimumPrice"
+            );
 
         this.settings.maximumPrice =
-            this.readNumber("maximumPrice");
+            this.readNumber(
+                "maximumPrice"
+            );
 
         this.settings.minimumVolume =
-            this.readNumber("minimumVolume");
+            this.readNumber(
+                "minimumVolume"
+            );
 
         this.settings.minimumRelativeVolume =
             this.readNumber(
@@ -176,11 +255,14 @@ StockScanner.scanner = {
             );
 
         this.settings.minimumMove =
-            this.readNumber("minimumMove");
+            this.readNumber(
+                "minimumMove"
+            );
 
         this.settings.maximumSpread =
-            this.readNumber("maximumSpread");
-
+            this.readNumber(
+                "maximumSpread"
+            );
 
         this.updateSummary();
 
@@ -190,9 +272,8 @@ StockScanner.scanner = {
     applyFilters() {
 
         let results = [
-            ...StockScanner.data.stocks
+            ...this.stocks
         ];
-
 
         const s =
             this.settings;
@@ -203,7 +284,7 @@ StockScanner.scanner = {
             results =
                 results.filter(
                     stock =>
-                        stock.price >=
+                        Number(stock.price) >=
                         s.minimumPrice
                 );
 
@@ -215,7 +296,7 @@ StockScanner.scanner = {
             results =
                 results.filter(
                     stock =>
-                        stock.price <=
+                        Number(stock.price) <=
                         s.maximumPrice
                 );
 
@@ -227,7 +308,7 @@ StockScanner.scanner = {
             results =
                 results.filter(
                     stock =>
-                        stock.volume >=
+                        Number(stock.volume) >=
                         s.minimumVolume
                 );
 
@@ -241,7 +322,9 @@ StockScanner.scanner = {
             results =
                 results.filter(
                     stock =>
-                        stock.relativeVolume >=
+                        Number(
+                            stock.relativeVolume
+                        ) >=
                         s.minimumRelativeVolume
                 );
 
@@ -253,7 +336,11 @@ StockScanner.scanner = {
             results =
                 results.filter(
                     stock =>
-                        Math.abs(stock.change) >=
+                        Math.abs(
+                            Number(
+                                stock.changePercent
+                            )
+                        ) >=
                         s.minimumMove
                 );
 
@@ -270,23 +357,15 @@ StockScanner.scanner = {
         const s =
             this.settings;
 
-        const summary =
-            document.getElementById(
-                "activeScanSummary"
-            );
-
-
-        summary.innerHTML = `
+        document.getElementById(
+            "activeScanSummary"
+        ).innerHTML = `
 
             <span>
                 Price:
-                ${
-                    s.minimumPrice ?? "ANY"
-                }
+                ${s.minimumPrice ?? "ANY"}
                 –
-                ${
-                    s.maximumPrice ?? "ANY"
-                }
+                ${s.maximumPrice ?? "ANY"}
             </span>
 
             <span>
@@ -316,8 +395,68 @@ StockScanner.scanner = {
             <span>
                 Setup: ALL
             </span>
-
         `;
+
+    },
+
+
+    formatVolume(volume) {
+
+        volume =
+            Number(volume || 0);
+
+        if (volume >= 1e9) {
+            return (
+                volume / 1e9
+            ).toFixed(1) + "B";
+        }
+
+        if (volume >= 1e6) {
+            return (
+                volume / 1e6
+            ).toFixed(1) + "M";
+        }
+
+        if (volume >= 1e3) {
+            return (
+                volume / 1e3
+            ).toFixed(1) + "K";
+        }
+
+        return String(volume);
+
+    },
+
+
+    setStatus(status) {
+
+        const elements =
+            document.querySelectorAll(
+                "#systemStatus span"
+            );
+
+        elements.forEach(element => {
+
+            if (
+                element.textContent
+                    .trim()
+                    .startsWith("SCANNER")
+            ) {
+
+                const indicator =
+                    element.querySelector("b");
+
+                indicator.textContent =
+                    status;
+
+                indicator.className =
+                    status === "READY"
+                        ? "status-ready"
+                        : "status-off";
+
+            }
+
+        });
 
     }
 
