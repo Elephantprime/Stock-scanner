@@ -716,10 +716,20 @@
 
 <!-- ========================================================
      MODULES
+
+     Load order matters:
+     1. Demo/fallback data
+     2. Market service abstraction
+     3. Feature modules
+     4. Main application controller
 ========================================================= -->
 
 <script src="data/demo-data.js"></script>
 
+<!-- Provider-independent market/news data service -->
+<script src="services/market-service.js"></script>
+
+<!-- Feature modules -->
 <script src="js/watchlist.js"></script>
 <script src="js/news.js"></script>
 <script src="js/scanner.js"></script>
