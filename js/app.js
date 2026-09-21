@@ -4,7 +4,7 @@
 
 StockScanner.app = {
 
-    init() {
+    async init() {
 
         this.startClock();
 
@@ -13,16 +13,15 @@ StockScanner.app = {
         this.bindWatchlistNavigation();
 
 
-        StockScanner.marketPulse.init();
-
         StockScanner.patterns.init();
 
-        StockScanner.news.init();
+StockScanner.watchlist.init();
 
-        StockScanner.scanner.init();
-
-        StockScanner.watchlist.init();
-
+await Promise.all([
+    StockScanner.marketPulse.init(),
+    StockScanner.news.init(),
+    StockScanner.scanner.init()
+]);
 
         /*
          Start with first scanner candidate selected.
