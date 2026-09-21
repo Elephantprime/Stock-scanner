@@ -1,15 +1,14 @@
 /* =========================================================
    MARKET INTELLIGENCE FEED
+   Data source: StockScanner.marketService
    ========================================================= */
 
 StockScanner.news = {
 
-    init() {
+    items: [],
 
-        this.render(
-            StockScanner.data.news
-        );
 
+    async init() {
 
         document
             .getElementById("newsFilter")
@@ -24,6 +23,51 @@ StockScanner.news = {
                 }
             );
 
+
+        await this.refresh();
+
+    },
+
+
+    async refresh() {
+
+        try {
+
+            const items =
+                await StockScanner.marketService
+                    .getMarketNews();
+
+            this.items =
+                Array.isArray(items)
+                    ? items
+                    : [];
+
+            this.render(
+                this.items
+            );
+
+            this.setStatus(
+                StockScanner.marketService.isLive()
+                    ? "LIVE"
+                    : "DEMO"
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                "[News]",
+                error
+            );
+
+            this.setStatus("ERROR");
+
+            this.renderError(
+                error.message
+            );
+
+        }
+
     },
 
 
@@ -34,7 +78,6 @@ StockScanner.news = {
                 "newsFeed"
             );
 
-
         feed.innerHTML = "";
 
 
@@ -42,7 +85,7 @@ StockScanner.news = {
 
             feed.innerHTML = `
                 <article class="news-item">
-                    No stories match this filter.
+                    No stories available.
                 </article>
             `;
 
@@ -58,7 +101,6 @@ StockScanner.news = {
                     "article"
                 );
 
-
             article.className =
                 "news-item";
 
@@ -68,29 +110,30 @@ StockScanner.news = {
                 <div class="news-meta">
 
                     <span>
-                        ${item.ticker}
+                        ${item.ticker || "MARKET"}
                         •
-                        ${item.type.toUpperCase()}
+                        ${(item.type || "news")
+                            .toUpperCase()}
                     </span>
 
                     <time>
-                        ${item.time}
+                        ${item.time || ""}
                     </time>
 
                 </div>
 
                 <h3>
-                    ${item.headline}
+                    ${item.headline || ""}
                 </h3>
 
                 <p>
-                    ${item.summary}
+                    ${item.summary || ""}
                 </p>
-
             `;
 
 
             if (
+                item.ticker &&
                 item.ticker !== "MARKET"
             ) {
 
@@ -120,7 +163,7 @@ StockScanner.news = {
         if (type === "all") {
 
             this.render(
-                StockScanner.data.news
+                this.items
             );
 
             return;
@@ -128,14 +171,65 @@ StockScanner.news = {
         }
 
 
-        const filtered =
-            StockScanner.data.news.filter(
+        this.render(
+            this.items.filter(
                 item =>
                     item.type === type
+            )
+        );
+
+    },
+
+
+    renderError(message) {
+
+        document.getElementById(
+            "newsFeed"
+        ).innerHTML = `
+
+            <article class="news-item">
+                <h3>
+                    News feed unavailable
+                </h3>
+
+                <p>
+                    ${message}
+                </p>
+            </article>
+        `;
+
+    },
+
+
+    setStatus(status) {
+
+        const elements =
+            document.querySelectorAll(
+                "#systemStatus span"
             );
 
+        elements.forEach(element => {
 
-        this.render(filtered);
+            if (
+                element.textContent
+                    .trim()
+                    .startsWith("NEWS")
+            ) {
+
+                const indicator =
+                    element.querySelector("b");
+
+                indicator.textContent =
+                    status;
+
+                indicator.className =
+                    status === "ERROR"
+                        ? "status-off"
+                        : "status-ready";
+
+            }
+
+        });
 
     }
 
