@@ -21,7 +21,7 @@ StockScanner.marketService = {
        CONFIGURATION
     ----------------------------------------------------- */
 
-    mode: "DEMO",
+    mode: "LIVE",
 
     endpoints: {
 
