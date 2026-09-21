@@ -17,6 +17,8 @@ StockScanner.app = {
 
 StockScanner.watchlist.init();
 
+StockScanner.search.init();
+       
 await Promise.all([
     StockScanner.marketPulse.init(),
     StockScanner.news.init(),
