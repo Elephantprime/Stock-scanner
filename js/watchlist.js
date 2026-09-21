@@ -275,9 +275,10 @@ StockScanner.watchlist = {
         symbols.forEach(symbol => {
 
             const stock =
-                StockScanner.ticker.getStock(
-                    symbol
-                );
+    StockScanner.data.stocks.find(
+        item =>
+            item.symbol === symbol
+    );
 
 
             if (!stock) {
