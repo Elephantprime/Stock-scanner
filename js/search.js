@@ -1,30 +1,32 @@
 /* =========================================================
-   STOCK SCANNER — TICKER SEARCH
+   STOCK SCANNER — LIVE TICKER SEARCH
 
-   PURPOSE:
-   - Search known stocks by ticker or company name
-   - Provide autocomplete suggestions
-   - Allow direct ticker lookup
-   - Send selected ticker to ticker.js
-   - Works with our LIVE quote service
+   - Autocomplete from current live scanner universe
+   - Direct arbitrary ticker lookup
+   - No demo stock dependency
    ========================================================= */
 
-window.StockScanner = window.StockScanner || {};
+window.StockScanner =
+    window.StockScanner || {};
 
 
 StockScanner.search = {
 
-    input: null,
-    button: null,
-    results: null,
+    input:
+        null,
 
-    selectedIndex: -1,
-    matches: [],
+    button:
+        null,
 
+    results:
+        null,
 
-    /* =====================================================
-       INITIALIZE
-    ===================================================== */
+    selectedIndex:
+        -1,
+
+    matches:
+        [],
+
 
     init() {
 
@@ -33,10 +35,12 @@ StockScanner.search = {
                 "tickerSearch"
             );
 
+
         this.button =
             document.getElementById(
                 "tickerSearchButton"
             );
+
 
         this.results =
             document.getElementById(
@@ -64,47 +68,30 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       EVENTS
-    ===================================================== */
-
     bindEvents() {
 
         this.input.addEventListener(
             "input",
-            () => {
-
-                this.handleInput();
-
-            }
+            () =>
+                this.handleInput()
         );
 
 
         this.input.addEventListener(
             "keydown",
-            event => {
-
+            event =>
                 this.handleKeydown(
                     event
-                );
-
-            }
+                )
         );
 
 
         this.button.addEventListener(
             "click",
-            () => {
-
-                this.submit();
-
-            }
+            () =>
+                this.submit()
         );
 
-
-        /*
-         Close suggestions when tapping outside search.
-        */
 
         document.addEventListener(
             "click",
@@ -128,10 +115,6 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       INPUT / AUTOCOMPLETE
-    ===================================================== */
-
     handleInput() {
 
         const query =
@@ -140,7 +123,8 @@ StockScanner.search = {
                 .toUpperCase();
 
 
-        this.selectedIndex = -1;
+        this.selectedIndex =
+            -1;
 
 
         if (!query) {
@@ -166,88 +150,104 @@ StockScanner.search = {
     findMatches(query) {
 
         const stocks =
-            StockScanner.data?.stocks ||
+            StockScanner.scanner
+                ?.stocks ||
             [];
 
 
         return stocks
-            .filter(stock => {
+            .filter(
+                stock => {
 
-                const symbol =
-                    String(
-                        stock.symbol || ""
-                    ).toUpperCase();
-
-
-                const company =
-                    String(
-                        stock.company || ""
-                    ).toUpperCase();
+                    const symbol =
+                        String(
+                            stock.symbol ||
+                            ""
+                        ).toUpperCase();
 
 
-                return (
-                    symbol.includes(query) ||
-                    company.includes(query)
-                );
+                    return symbol.includes(
+                        query
+                    );
 
-            })
-            .sort((a, b) => {
-
-                /*
-                 Exact ticker match first.
-                */
-
-                if (
-                    a.symbol.toUpperCase() ===
-                    query
-                ) {
-                    return -1;
                 }
+            )
+            .sort(
+                (a, b) => {
 
-                if (
-                    b.symbol.toUpperCase() ===
-                    query
-                ) {
-                    return 1;
+                    const aSymbol =
+                        String(
+                            a.symbol ||
+                            ""
+                        ).toUpperCase();
+
+
+                    const bSymbol =
+                        String(
+                            b.symbol ||
+                            ""
+                        ).toUpperCase();
+
+
+                    if (
+                        aSymbol ===
+                        query
+                    ) {
+
+                        return -1;
+
+                    }
+
+
+                    if (
+                        bSymbol ===
+                        query
+                    ) {
+
+                        return 1;
+
+                    }
+
+
+                    const aStarts =
+                        aSymbol.startsWith(
+                            query
+                        );
+
+
+                    const bStarts =
+                        bSymbol.startsWith(
+                            query
+                        );
+
+
+                    if (
+                        aStarts &&
+                        !bStarts
+                    ) {
+
+                        return -1;
+
+                    }
+
+
+                    if (
+                        bStarts &&
+                        !aStarts
+                    ) {
+
+                        return 1;
+
+                    }
+
+
+                    return aSymbol
+                        .localeCompare(
+                            bSymbol
+                        );
+
                 }
-
-
-                /*
-                 Tickers beginning with query next.
-                */
-
-                const aStarts =
-                    a.symbol
-                        .toUpperCase()
-                        .startsWith(query);
-
-                const bStarts =
-                    b.symbol
-                        .toUpperCase()
-                        .startsWith(query);
-
-
-                if (
-                    aStarts &&
-                    !bStarts
-                ) {
-                    return -1;
-                }
-
-
-                if (
-                    bStarts &&
-                    !aStarts
-                ) {
-                    return 1;
-                }
-
-
-                return a.symbol.localeCompare(
-                    b.symbol
-                );
-
-            })
+            )
             .slice(
                 0,
                 8
@@ -256,28 +256,25 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       RENDER AUTOCOMPLETE
-    ===================================================== */
-
     renderResults() {
 
-        this.results.innerHTML = "";
+        this.results.innerHTML =
+            "";
 
 
         const typedSymbol =
-            StockScanner.marketService
+            StockScanner
+                .marketService
                 .normalizeSymbol(
                     this.input.value
                 );
 
 
-        /*
-         Known/demo matches.
-        */
-
         this.matches.forEach(
-            (stock, index) => {
+            (
+                stock,
+                index
+            ) => {
 
                 const item =
                     document.createElement(
@@ -297,23 +294,28 @@ StockScanner.search = {
                     index;
 
 
+                const price =
+                    this.numberOrNull(
+                        stock.price
+                    );
+
+
                 item.innerHTML = `
 
                     <span class="search-result-symbol">
-                        ${stock.symbol}
+                        ${this.escapeHTML(stock.symbol)}
                     </span>
 
                     <span class="search-result-company">
-                        ${stock.company || ""}
+                        Live scanner result
                     </span>
 
                     <span class="search-result-price">
                         ${
-                            stock.price != null
-                                ? "$" +
-                                  Number(
-                                      stock.price
-                                  ).toFixed(2)
+                            price !== null
+                                ? this.formatPrice(
+                                    price
+                                )
                                 : ""
                         }
                     </span>
@@ -322,13 +324,10 @@ StockScanner.search = {
 
                 item.addEventListener(
                     "click",
-                    () => {
-
+                    () =>
                         this.select(
                             stock.symbol
-                        );
-
-                    }
+                        )
                 );
 
 
@@ -340,22 +339,13 @@ StockScanner.search = {
         );
 
 
-        /*
-         This allows arbitrary ticker lookup.
-
-         Example:
-         User types AAPL even though AAPL isn't currently
-         present in demo-data.js.
-
-         The selection goes to ticker.js, which asks the
-         live quote service for AAPL.
-        */
-
         const exactMatch =
             this.matches.some(
                 stock =>
-                    stock.symbol
-                        .toUpperCase() ===
+                    String(
+                        stock.symbol ||
+                        ""
+                    ).toUpperCase() ===
                     typedSymbol
             );
 
@@ -382,7 +372,7 @@ StockScanner.search = {
             lookup.innerHTML = `
 
                 <span class="search-result-symbol">
-                    ${typedSymbol}
+                    ${this.escapeHTML(typedSymbol)}
                 </span>
 
                 <span class="search-result-company">
@@ -397,13 +387,10 @@ StockScanner.search = {
 
             lookup.addEventListener(
                 "click",
-                () => {
-
+                () =>
                     this.select(
                         typedSymbol
-                    );
-
-                }
+                    )
             );
 
 
@@ -415,7 +402,8 @@ StockScanner.search = {
 
 
         if (
-            !this.results.children.length
+            !this.results.children
+                .length
         ) {
 
             this.hideResults();
@@ -432,22 +420,20 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       KEYBOARD CONTROL
-    ===================================================== */
-
     handleKeydown(event) {
 
         const items =
             Array.from(
-                this.results.querySelectorAll(
-                    ".ticker-search-result"
-                )
+                this.results
+                    .querySelectorAll(
+                        ".ticker-search-result"
+                    )
             );
 
 
         if (
-            event.key === "ArrowDown"
+            event.key ===
+            "ArrowDown"
         ) {
 
             if (!items.length) {
@@ -466,7 +452,8 @@ StockScanner.search = {
                 items.length
             ) {
 
-                this.selectedIndex = 0;
+                this.selectedIndex =
+                    0;
 
             }
 
@@ -481,7 +468,8 @@ StockScanner.search = {
 
 
         if (
-            event.key === "ArrowUp"
+            event.key ===
+            "ArrowUp"
         ) {
 
             if (!items.length) {
@@ -496,7 +484,8 @@ StockScanner.search = {
 
 
             if (
-                this.selectedIndex < 0
+                this.selectedIndex <
+                0
             ) {
 
                 this.selectedIndex =
@@ -515,14 +504,16 @@ StockScanner.search = {
 
 
         if (
-            event.key === "Enter"
+            event.key ===
+            "Enter"
         ) {
 
             event.preventDefault();
 
 
             if (
-                this.selectedIndex >= 0 &&
+                this.selectedIndex >=
+                    0 &&
                 items[
                     this.selectedIndex
                 ]
@@ -531,6 +522,7 @@ StockScanner.search = {
                 items[
                     this.selectedIndex
                 ].click();
+
 
                 return;
 
@@ -545,7 +537,8 @@ StockScanner.search = {
 
 
         if (
-            event.key === "Escape"
+            event.key ===
+            "Escape"
         ) {
 
             this.hideResults();
@@ -568,7 +561,7 @@ StockScanner.search = {
                 item.classList.toggle(
                     "active",
                     index ===
-                    this.selectedIndex
+                        this.selectedIndex
                 );
 
             }
@@ -577,14 +570,11 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       SUBMIT DIRECT SEARCH
-    ===================================================== */
-
     submit() {
 
         const symbol =
-            StockScanner.marketService
+            StockScanner
+                .marketService
                 .normalizeSymbol(
                     this.input.value
                 );
@@ -595,42 +585,18 @@ StockScanner.search = {
         }
 
 
-        /*
-         If input exactly matches a known company ticker,
-         use it.
-
-         Otherwise treat input as a ticker symbol.
-        */
-
-        const exact =
-            (
-                StockScanner.data?.stocks ||
-                []
-            ).find(
-                stock =>
-                    stock.symbol
-                        .toUpperCase() ===
-                    symbol
-            );
-
-
         this.select(
-            exact
-                ? exact.symbol
-                : symbol
+            symbol
         );
 
     },
 
 
-    /* =====================================================
-       SELECT STOCK
-    ===================================================== */
-
     async select(symbol) {
 
         symbol =
-            StockScanner.marketService
+            StockScanner
+                .marketService
                 .normalizeSymbol(
                     symbol
                 );
@@ -655,17 +621,12 @@ StockScanner.search = {
 
         try {
 
-            await StockScanner.ticker.select(
-                symbol
-            );
+            await StockScanner
+                .ticker
+                .select(
+                    symbol
+                );
 
-
-            /*
-             Scroll selected-stock workspace into view
-             on phones/tablets.
-
-             Desktop layout won't meaningfully move.
-            */
 
             const panel =
                 document.querySelector(
@@ -675,15 +636,18 @@ StockScanner.search = {
 
             if (
                 panel &&
-                window.innerWidth <= 1100
+                window.innerWidth <=
+                    1100
             ) {
 
                 panel.scrollIntoView({
+
                     behavior:
                         "smooth",
 
                     block:
                         "start"
+
                 });
 
             }
@@ -708,10 +672,6 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       SEARCH BUTTON STATE
-    ===================================================== */
-
     setLoading(loading) {
 
         this.button.disabled =
@@ -726,10 +686,6 @@ StockScanner.search = {
     },
 
 
-    /* =====================================================
-       HIDE RESULTS
-    ===================================================== */
-
     hideResults() {
 
         this.results.classList.add(
@@ -737,7 +693,77 @@ StockScanner.search = {
         );
 
 
-        this.selectedIndex = -1;
+        this.selectedIndex =
+            -1;
+
+    },
+
+
+    numberOrNull(value) {
+
+        const number =
+            Number(value);
+
+
+        return Number.isFinite(
+            number
+        )
+            ? number
+            : null;
+
+    },
+
+
+    formatPrice(value) {
+
+        if (
+            value >= 1
+        ) {
+
+            return `$${value.toFixed(2)}`;
+
+        }
+
+
+        if (
+            value >= 0.01
+        ) {
+
+            return `$${value.toFixed(3)}`;
+
+        }
+
+
+        return `$${value.toFixed(4)}`;
+
+    },
+
+
+    escapeHTML(value) {
+
+        return String(
+            value ?? ""
+        )
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
 
     }
 
