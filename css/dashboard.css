@@ -4,7 +4,9 @@
    ========================================================= */
 
 
-/* ---------- RESET / VARIABLES ---------- */
+/* =========================================================
+   RESET / VARIABLES
+   ========================================================= */
 
 :root {
     --bg: #070b10;
@@ -45,7 +47,9 @@ html,
 body {
     margin: 0;
     padding: 0;
+
     min-height: 100%;
+
     background: var(--bg);
     color: var(--text);
 
@@ -103,7 +107,12 @@ button:disabled {
     height: var(--header-height);
 
     display: grid;
-    grid-template-columns: auto 1fr auto;
+
+    grid-template-columns:
+        auto
+        1fr
+        auto;
+
     align-items: center;
 
     gap: 24px;
@@ -124,6 +133,7 @@ button:disabled {
 
     font-size: 15px;
     font-weight: 800;
+
     letter-spacing: 1px;
 
     white-space: nowrap;
@@ -132,6 +142,7 @@ button:disabled {
 
 .brand-mark {
     color: var(--accent);
+
     font-size: 20px;
 }
 
@@ -143,10 +154,11 @@ button:disabled {
 
     gap: 18px;
 
-    font-size: 10px;
-    letter-spacing: 0.7px;
-
     color: var(--muted);
+
+    font-size: 10px;
+
+    letter-spacing: 0.7px;
 }
 
 
@@ -166,12 +178,252 @@ button:disabled {
 
 
 .market-clock {
+    color: var(--muted);
+
     font-family: monospace;
     font-size: 14px;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   TICKER SEARCH
+   ========================================================= */
+
+.ticker-search-bar {
+    position: relative;
+
+    z-index: 50;
+
+    padding: 10px 14px;
+
+    background: var(--bg);
+
+    border-bottom: 1px solid var(--border);
+}
+
+
+.ticker-search-wrapper {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+    max-width: 900px;
+
+    margin: 0 auto;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 7px;
+}
+
+
+.ticker-search-wrapper:focus-within {
+    border-color: var(--accent);
+
+    box-shadow:
+        0 0 0 1px
+        rgba(53, 167, 255, 0.15);
+}
+
+
+.ticker-search-icon {
+    flex: 0 0 auto;
+
+    padding-left: 14px;
+
+    color: var(--muted);
+
+    font-size: 22px;
+}
+
+
+#tickerSearch {
+    flex: 1;
+
+    min-width: 0;
+
+    padding: 13px 12px;
+
+    border: 0;
+
+    outline: 0;
+
+    background: transparent;
+
+    color: var(--text);
+
+    font-size: 15px;
+
+    text-transform: uppercase;
+}
+
+
+#tickerSearch::placeholder {
+    color: var(--muted);
+
+    text-transform: none;
+}
+
+
+.ticker-search-button {
+    align-self: stretch;
+
+    padding: 0 20px;
+
+    border: 0;
+
+    border-left: 1px solid var(--border);
+
+    border-radius:
+        0
+        6px
+        6px
+        0;
+
+    background: var(--panel-2);
+
+    color: var(--accent);
+
+    font-weight: 700;
+}
+
+
+.ticker-search-button:hover {
+    background: var(--panel-3);
+}
+
+
+.ticker-search-button:disabled {
+    cursor: wait;
+
+    opacity: 0.6;
+}
+
+
+/* =========================================================
+   SEARCH DROPDOWN
+   ========================================================= */
+
+.ticker-search-results {
+    position: absolute;
+
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+
+    z-index: 1000;
+
+    overflow: hidden;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 7px;
+
+    box-shadow:
+        0 14px 35px
+        rgba(0, 0, 0, 0.45);
+}
+
+
+.ticker-search-results.hidden {
+    display: none;
+}
+
+
+.ticker-search-result {
+    display: grid;
+
+    grid-template-columns:
+        minmax(65px, auto)
+        1fr
+        auto;
+
+    align-items: center;
+
+    gap: 12px;
+
+    width: 100%;
+
+    padding: 12px 14px;
+
+    border: 0;
+
+    border-bottom: 1px solid var(--border);
+
+    background: var(--panel);
+
+    color: var(--text);
+
+    text-align: left;
+}
+
+
+.ticker-search-result:last-child {
+    border-bottom: 0;
+}
+
+
+.ticker-search-result:hover,
+.ticker-search-result.active {
+    background: var(--panel-3);
+}
+
+
+.search-result-symbol {
+    color: var(--accent);
+
+    font-size: 15px;
+    font-weight: 800;
+}
+
+
+.search-result-company {
+    overflow: hidden;
 
     color: var(--muted);
 
     white-space: nowrap;
+
+    text-overflow: ellipsis;
+}
+
+
+.search-result-price {
+    color: var(--text);
+
+    font-weight: 700;
+}
+
+
+.search-result-live {
+    padding: 3px 7px;
+
+    border:
+        1px solid
+        rgba(39, 209, 127, 0.35);
+
+    border-radius: 4px;
+
+    color: var(--green);
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.5px;
+}
+
+
+.ticker-direct-lookup {
+    background:
+        rgba(53, 167, 255, 0.04);
 }
 
 
@@ -203,6 +455,7 @@ button:disabled {
 
     font-size: 10px;
     font-weight: 800;
+
     letter-spacing: 1px;
 
     border-right: 1px solid var(--border);
@@ -230,8 +483,9 @@ button:disabled {
 
 
 .pulse-item span {
-    font-size: 9px;
     color: var(--muted);
+
+    font-size: 9px;
 }
 
 
@@ -239,6 +493,17 @@ button:disabled {
     margin-top: 2px;
 
     font-size: 12px;
+}
+
+
+/* Change percentage inserted inside market-pulse strong */
+
+.pulse-item strong span {
+    display: inline;
+
+    margin-left: 4px;
+
+    font-size: 9px;
 }
 
 
@@ -265,12 +530,14 @@ button:disabled {
     border: none;
 
     background: transparent;
+
     color: var(--muted);
 }
 
 
 .nav-arrow:hover {
     color: var(--accent);
+
     background: var(--accent-soft);
 }
 
@@ -298,7 +565,10 @@ button:disabled {
     padding: 0 20px;
 
     border: none;
-    border-bottom: 2px solid transparent;
+
+    border-bottom:
+        2px solid
+        transparent;
 
     background: transparent;
 
@@ -332,10 +602,6 @@ button:disabled {
 .dashboard {
     display: grid;
 
-    /*
-       News | Scanner | Selected ticker
-    */
-
     grid-template-columns:
         minmax(250px, 0.85fr)
         minmax(460px, 1.65fr)
@@ -352,13 +618,13 @@ button:disabled {
    ========================================================= */
 
 .panel {
+    overflow: hidden;
+
     background: var(--panel);
 
     border: 1px solid var(--border);
 
     border-radius: var(--radius);
-
-    overflow: hidden;
 }
 
 
@@ -383,6 +649,7 @@ button:disabled {
     margin: 0;
 
     font-size: 11px;
+
     letter-spacing: 0.8px;
 }
 
@@ -405,9 +672,9 @@ button:disabled {
 .primary-button,
 .success-button,
 .danger-button {
-    border-radius: 4px;
-
     padding: 8px 11px;
+
+    border-radius: 4px;
 
     font-size: 10px;
     font-weight: 800;
@@ -426,7 +693,8 @@ button:disabled {
 
 
 .primary-button:hover {
-    background: rgba(53, 167, 255, 0.22);
+    background:
+        rgba(53, 167, 255, 0.22);
 }
 
 
@@ -439,12 +707,24 @@ button:disabled {
 }
 
 
+.success-button:hover:not(:disabled) {
+    background:
+        rgba(39, 209, 127, 0.2);
+}
+
+
 .danger-button {
     color: var(--red);
 
     background: var(--red-soft);
 
     border: 1px solid var(--red);
+}
+
+
+.danger-button:hover:not(:disabled) {
+    background:
+        rgba(255, 82, 99, 0.2);
 }
 
 
@@ -465,6 +745,8 @@ button:disabled {
 .header-controls select {
     max-width: 105px;
 
+    padding: 5px;
+
     background: var(--panel-3);
 
     color: var(--text);
@@ -472,8 +754,6 @@ button:disabled {
     border: 1px solid var(--border-light);
 
     border-radius: 4px;
-
-    padding: 5px;
 
     font-size: 10px;
 }
@@ -504,6 +784,8 @@ button:disabled {
     display: flex;
     justify-content: space-between;
 
+    gap: 8px;
+
     margin-bottom: 6px;
 
     color: var(--accent);
@@ -516,6 +798,7 @@ button:disabled {
     margin: 0 0 6px;
 
     font-size: 12px;
+
     line-height: 1.4;
 }
 
@@ -526,6 +809,7 @@ button:disabled {
     color: var(--muted);
 
     font-size: 10px;
+
     line-height: 1.45;
 }
 
@@ -593,6 +877,7 @@ th {
     text-align: left;
 
     font-size: 9px;
+
     letter-spacing: 0.4px;
 
     white-space: nowrap;
@@ -627,7 +912,9 @@ tbody tr:not(.empty-row):hover {
 }
 
 
-/* Utility classes JS can use later */
+/* =========================================================
+   UTILITY STATES
+   ========================================================= */
 
 .positive {
     color: var(--green) !important;
@@ -721,7 +1008,9 @@ tbody tr:not(.empty-row):hover {
 .watchlist-actions {
     display: grid;
 
-    grid-template-columns: 1fr auto;
+    grid-template-columns:
+        1fr
+        auto;
 
     gap: 7px;
 
@@ -730,44 +1019,264 @@ tbody tr:not(.empty-row):hover {
 
 
 /* =========================================================
-   CHART
+   LIVE CHART
    ========================================================= */
 
-.chart-placeholder {
-    height: 190px;
-
+.live-chart {
     margin: 0 12px 12px;
 
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    gap: 5px;
-
-    border: 1px dashed var(--border-light);
-
-    border-radius: 5px;
+    overflow: hidden;
 
     background:
         linear-gradient(
             180deg,
-            rgba(53, 167, 255, 0.03),
+            rgba(53, 167, 255, 0.025),
             transparent
         );
 
-    color: var(--dim);
+    border: 1px solid var(--border);
+
+    border-radius: 5px;
 }
 
 
-.chart-placeholder span {
-    font-size: 12px;
+.chart-toolbar {
+    min-height: 36px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 5px 7px;
+
+    background: #0a1017;
+
+    border-bottom: 1px solid var(--border);
+}
+
+
+.chart-status {
+    min-width: 0;
+
+    overflow: hidden;
+
+    color: var(--muted);
+
+    font-size: 8px;
+    font-weight: 800;
+
+    letter-spacing: 0.5px;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+}
+
+
+.chart-timeframes {
+    display: flex;
+    align-items: center;
+
+    gap: 3px;
+}
+
+
+.chart-timeframes button {
+    min-width: 31px;
+
+    padding: 5px 6px;
+
+    border:
+        1px solid
+        transparent;
+
+    border-radius: 3px;
+
+    background: transparent;
+
+    color: var(--muted);
+
+    font-size: 8px;
     font-weight: 800;
 }
 
 
-.chart-placeholder small {
-    font-size: 9px;
+.chart-timeframes button:hover {
+    color: var(--text);
+
+    border-color: var(--border-light);
+}
+
+
+.chart-timeframes button.active {
+    color: var(--accent);
+
+    background: var(--accent-soft);
+
+    border-color: var(--accent);
+}
+
+
+.chart-canvas {
+    position: relative;
+
+    width: 100%;
+    height: 255px;
+
+    overflow: hidden;
+}
+
+
+.chart-message {
+    position: absolute;
+
+    inset: 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 20px;
+
+    color: var(--dim);
+
+    font-size: 10px;
+
+    text-align: center;
+}
+
+
+.stock-chart-svg {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: visible;
+}
+
+
+.chart-grid-line {
+    stroke:
+        rgba(
+            130,
+            145,
+            162,
+            0.15
+        );
+
+    stroke-width: 1;
+
+    vector-effect:
+        non-scaling-stroke;
+}
+
+
+.chart-volume-separator {
+    stroke:
+        rgba(
+            130,
+            145,
+            162,
+            0.18
+        );
+
+    stroke-width: 1;
+
+    vector-effect:
+        non-scaling-stroke;
+}
+
+
+.chart-axis-text,
+.chart-time-text {
+    fill: var(--muted);
+
+    font-family: monospace;
+
+    font-size: 8px;
+}
+
+
+.chart-wick {
+    stroke-width: 1;
+
+    vector-effect:
+        non-scaling-stroke;
+}
+
+
+.chart-wick.chart-up {
+    stroke: var(--green);
+}
+
+
+.chart-wick.chart-down {
+    stroke: var(--red);
+}
+
+
+.chart-candle.chart-up {
+    fill: var(--green);
+}
+
+
+.chart-candle.chart-down {
+    fill: var(--red);
+}
+
+
+.chart-volume-bar.chart-up {
+    fill:
+        rgba(
+            39,
+            209,
+            127,
+            0.28
+        );
+}
+
+
+.chart-volume-bar.chart-down {
+    fill:
+        rgba(
+            255,
+            82,
+            99,
+            0.28
+        );
+}
+
+
+.chart-last-price-line {
+    stroke: var(--accent);
+
+    stroke-width: 1;
+
+    stroke-dasharray:
+        3 3;
+
+    opacity: 0.7;
+
+    vector-effect:
+        non-scaling-stroke;
+}
+
+
+.chart-last-price-box {
+    fill: var(--accent);
+}
+
+
+.chart-last-price-text {
+    fill: #071019;
+
+    font-family: monospace;
+
+    font-size: 8px;
+    font-weight: 800;
 }
 
 
@@ -778,7 +1287,11 @@ tbody tr:not(.empty-row):hover {
 .analysis-grid {
     display: grid;
 
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns:
+        repeat(
+            3,
+            1fr
+        );
 
     gap: 1px;
 
@@ -872,6 +1385,23 @@ tbody tr:not(.empty-row):hover {
 }
 
 
+.why-now p {
+    margin: 0;
+}
+
+
+.why-now ul {
+    margin: 7px 0 0;
+
+    padding-left: 18px;
+}
+
+
+.why-now li {
+    margin: 4px 0;
+}
+
+
 /* =========================================================
    TRADE PLAN
    ========================================================= */
@@ -880,6 +1410,8 @@ tbody tr:not(.empty-row):hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
+
+    gap: 12px;
 
     padding: 5px 0;
 
@@ -901,6 +1433,8 @@ tbody tr:not(.empty-row):hover {
 
 .trade-row strong {
     font-size: 10px;
+
+    text-align: right;
 }
 
 
@@ -911,7 +1445,9 @@ tbody tr:not(.empty-row):hover {
 .tool-buttons {
     display: grid;
 
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns:
+        1fr
+        1fr;
 
     gap: 7px;
 
@@ -936,9 +1472,9 @@ tbody tr:not(.empty-row):hover {
 
 
 .tool-buttons button:hover {
-    border-color: var(--accent);
-
     color: var(--accent);
+
+    border-color: var(--accent);
 }
 
 
@@ -958,6 +1494,13 @@ tbody tr:not(.empty-row):hover {
 }
 
 
+.watchlist-row-remove {
+    padding: 5px 7px;
+
+    font-size: 8px;
+}
+
+
 /* =========================================================
    DRAWERS
    ========================================================= */
@@ -970,16 +1513,23 @@ tbody tr:not(.empty-row):hover {
     top: 0;
     right: 0;
 
-    width: min(380px, 92vw);
+    width:
+        min(
+            380px,
+            92vw
+        );
+
     height: 100vh;
+
+    overflow-y: auto;
 
     background: var(--panel);
 
     border-left: 1px solid var(--border-light);
 
-    box-shadow: -10px 0 35px rgba(0, 0, 0, 0.45);
-
-    overflow-y: auto;
+    box-shadow:
+        -10px 0 35px
+        rgba(0, 0, 0, 0.45);
 }
 
 
@@ -1110,7 +1660,13 @@ tbody tr:not(.empty-row):hover {
 
     inset: 0;
 
-    background: rgba(0, 0, 0, 0.58);
+    background:
+        rgba(
+            0,
+            0,
+            0,
+            0.58
+        );
 }
 
 
@@ -1150,22 +1706,28 @@ tbody tr:not(.empty-row):hover {
 
 
     .ticker-panel {
-        grid-column: 1 / -1;
+        grid-column:
+            1 / -1;
 
         display: grid;
 
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns:
+            1fr
+            1fr;
+
+        align-items: start;
     }
 
 
     .ticker-panel .panel-header {
-        grid-column: 1 / -1;
+        grid-column:
+            1 / -1;
     }
 
 
     .ticker-identity,
     .watchlist-actions,
-    .chart-placeholder {
+    .live-chart {
         grid-column: 1;
     }
 
@@ -1176,6 +1738,11 @@ tbody tr:not(.empty-row):hover {
     .trade-plan,
     .tool-buttons {
         grid-column: 2;
+    }
+
+
+    .chart-canvas {
+        height: 285px;
     }
 
 }
@@ -1190,14 +1757,17 @@ tbody tr:not(.empty-row):hover {
     .top-header {
         height: auto;
 
-        grid-template-columns: 1fr auto;
+        grid-template-columns:
+            1fr
+            auto;
 
         padding: 10px 12px;
     }
 
 
     .system-status {
-        grid-column: 1 / -1;
+        grid-column:
+            1 / -1;
 
         justify-content: flex-start;
 
@@ -1208,6 +1778,44 @@ tbody tr:not(.empty-row):hover {
         padding-top: 7px;
 
         border-top: 1px solid var(--border);
+    }
+
+
+    .ticker-search-bar {
+        padding: 8px 10px;
+    }
+
+
+    .ticker-search-icon {
+        padding-left: 10px;
+
+        font-size: 18px;
+    }
+
+
+    #tickerSearch {
+        padding: 12px 8px;
+
+        font-size: 14px;
+    }
+
+
+    .ticker-search-button {
+        padding: 0 12px;
+
+        font-size: 12px;
+    }
+
+
+    .ticker-search-result {
+        grid-template-columns:
+            58px
+            1fr
+            auto;
+
+        gap: 8px;
+
+        padding: 11px 10px;
     }
 
 
@@ -1231,10 +1839,10 @@ tbody tr:not(.empty-row):hover {
 
 
     /*
-       On phone:
-       scanner first,
-       selected ticker second,
-       news third.
+       Phone order:
+       1. Scanner
+       2. Selected ticker
+       3. News
     */
 
     .scanner-panel {
@@ -1267,7 +1875,11 @@ tbody tr:not(.empty-row):hover {
 
 
     .analysis-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
     }
 
 
@@ -1277,17 +1889,56 @@ tbody tr:not(.empty-row):hover {
 
 
     .watchlist-panel {
-        margin: 0 6px 6px;
+        margin:
+            0
+            6px
+            6px;
     }
 
 
     .watchlist-actions {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns:
+            1fr
+            1fr;
     }
 
 
-    .chart-placeholder {
-        height: 220px;
+    /*
+       Mobile chart gets extra vertical room.
+    */
+
+    .chart-canvas {
+        height: 300px;
+    }
+
+
+    .chart-toolbar {
+        align-items: flex-start;
+
+        flex-direction: column;
+
+        padding: 7px;
+    }
+
+
+    .chart-status {
+        width: 100%;
+    }
+
+
+    .chart-timeframes {
+        width: 100%;
+
+        justify-content: space-between;
+    }
+
+
+    .chart-timeframes button {
+        flex: 1;
+
+        min-width: 0;
+
+        padding: 7px 4px;
     }
 
 }
@@ -1314,6 +1965,16 @@ tbody tr:not(.empty-row):hover {
     }
 
 
+    .ticker-identity {
+        gap: 8px;
+    }
+
+
+    .ticker-price {
+        font-size: 16px;
+    }
+
+
     .tool-buttons {
         grid-template-columns: 1fr;
     }
@@ -1325,323 +1986,26 @@ tbody tr:not(.empty-row):hover {
         overflow-x: auto;
     }
 
-  }
-/* =========================================================
-   TICKER SEARCH
-========================================================= */
 
-.ticker-search-bar {
-    position: relative;
-    z-index: 50;
-
-    padding: 10px 14px;
-
-    background: var(--bg);
-
-    border-bottom:
-        1px solid var(--border);
-}
-
-
-.ticker-search-wrapper {
-    position: relative;
-
-    display: flex;
-    align-items: center;
-
-    width: 100%;
-    max-width: 900px;
-
-    margin: 0 auto;
-
-    background: var(--panel);
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 7px;
-}
-
-
-.ticker-search-wrapper:focus-within {
-    border-color:
-        var(--accent);
-
-    box-shadow:
-        0 0 0 1px
-        rgba(53, 167, 255, 0.15);
-}
-
-
-.ticker-search-icon {
-    flex: 0 0 auto;
-
-    padding-left: 14px;
-
-    color: var(--muted);
-
-    font-size: 22px;
-}
-
-
-#tickerSearch {
-    flex: 1;
-
-    min-width: 0;
-
-    padding:
-        13px 12px;
-
-    border: 0;
-
-    outline: 0;
-
-    background: transparent;
-
-    color: var(--text);
-
-    font-size: 15px;
-
-    text-transform: uppercase;
-}
-
-
-#tickerSearch::placeholder {
-    color: var(--muted);
-
-    text-transform: none;
-}
-
-
-.ticker-search-button {
-    align-self: stretch;
-
-    padding:
-        0 20px;
-
-    border: 0;
-
-    border-left:
-        1px solid var(--border);
-
-    border-radius:
-        0 6px 6px 0;
-
-    background:
-        var(--panel-2);
-
-    color:
-        var(--accent);
-
-    font-weight: 700;
-
-    cursor: pointer;
-}
-
-
-.ticker-search-button:hover {
-    background:
-        var(--panel-3);
-}
-
-
-.ticker-search-button:disabled {
-    opacity: 0.6;
-
-    cursor: wait;
-}
-
-
-/* =========================================================
-   SEARCH DROPDOWN
-========================================================= */
-
-.ticker-search-results {
-    position: absolute;
-
-    top: calc(100% + 6px);
-    left: 0;
-    right: 0;
-
-    z-index: 1000;
-
-    overflow: hidden;
-
-    background:
-        var(--panel);
-
-    border:
-        1px solid var(--border);
-
-    border-radius: 7px;
-
-    box-shadow:
-        0 14px 35px
-        rgba(0, 0, 0, 0.45);
-}
-
-
-.ticker-search-results.hidden {
-    display: none;
-}
-
-
-.ticker-search-result {
-    display: grid;
-
-    grid-template-columns:
-        minmax(65px, auto)
-        1fr
-        auto;
-
-    align-items: center;
-
-    gap: 12px;
-
-    width: 100%;
-
-    padding:
-        12px 14px;
-
-    border: 0;
-
-    border-bottom:
-        1px solid var(--border);
-
-    background:
-        var(--panel);
-
-    color:
-        var(--text);
-
-    text-align: left;
-
-    cursor: pointer;
-}
-
-
-.ticker-search-result:last-child {
-    border-bottom: 0;
-}
-
-
-.ticker-search-result:hover,
-.ticker-search-result.active {
-    background:
-        var(--panel-3);
-}
-
-
-.search-result-symbol {
-    color:
-        var(--accent);
-
-    font-weight: 800;
-
-    font-size: 15px;
-}
-
-
-.search-result-company {
-    overflow: hidden;
-
-    color:
-        var(--muted);
-
-    white-space: nowrap;
-
-    text-overflow: ellipsis;
-}
-
-
-.search-result-price {
-    color:
-        var(--text);
-
-    font-weight: 700;
-}
-
-
-.search-result-live {
-    padding:
-        3px 7px;
-
-    border:
-        1px solid
-        rgba(39, 209, 127, 0.35);
-
-    border-radius: 4px;
-
-    color:
-        var(--green);
-
-    font-size: 10px;
-
-    font-weight: 800;
-
-    letter-spacing:
-        0.5px;
-}
-
-
-.ticker-direct-lookup {
-    background:
-        rgba(53, 167, 255, 0.04);
-}
-
-
-/* =========================================================
-   SEARCH — MOBILE
-========================================================= */
-
-@media (
-    max-width: 700px
-) {
-
-    .ticker-search-bar {
-        padding:
-            8px 10px;
-    }
-
-
-    .ticker-search-icon {
-        padding-left:
+    .live-chart {
+        margin:
+            0
+            8px
             10px;
-
-        font-size:
-            18px;
     }
 
 
-    #tickerSearch {
-        padding:
-            12px 8px;
-
-        font-size:
-            14px;
+    .chart-canvas {
+        height: 280px;
     }
 
 
-    .ticker-search-button {
-        padding:
-            0 12px;
-
-        font-size:
-            12px;
+    .analysis-grid,
+    .setup-card,
+    .why-now,
+    .trade-plan {
+        margin-left: 8px;
+        margin-right: 8px;
     }
 
-
-    .ticker-search-result {
-        grid-template-columns:
-            58px
-            1fr
-            auto;
-
-        gap:
-            8px;
-
-        padding:
-            11px 10px;
-    }
-
-}
+   }
