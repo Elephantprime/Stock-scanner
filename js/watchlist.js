@@ -1,13 +1,47 @@
 /* =========================================================
-   WATCHLIST MANAGER
+   STOCK SCANNER — WATCHLIST MANAGER
+
+   Watchlist membership:
+   Browser localStorage
+
+   Quote data:
+   LIVE market service
+
+   NO DEMO QUOTE DATA.
    ========================================================= */
+
+window.StockScanner =
+    window.StockScanner || {};
+
 
 StockScanner.watchlist = {
 
-    active: "main",
+    active:
+        "main",
+
+
+    storageKey:
+        "stockScanner.watchlists.v1",
+
+
+    lists: {
+
+        main: [],
+
+        momentum: [],
+
+        swing: []
+
+    },
+
+
+    quotes:
+        {},
 
 
     init() {
+
+        this.load();
 
         this.bindTabs();
 
@@ -15,51 +49,165 @@ StockScanner.watchlist = {
 
         this.render();
 
+        this.updateButtons();
+
+        this.refreshActive();
+
+    },
+
+
+    load() {
+
+        try {
+
+            const saved =
+                JSON.parse(
+                    localStorage.getItem(
+                        this.storageKey
+                    ) || "null"
+                );
+
+
+            if (
+                saved &&
+                typeof saved ===
+                    "object"
+            ) {
+
+                [
+                    "main",
+                    "momentum",
+                    "swing"
+                ].forEach(
+                    name => {
+
+                        if (
+                            Array.isArray(
+                                saved[name]
+                            )
+                        ) {
+
+                            this.lists[
+                                name
+                            ] =
+                                saved[name]
+                                    .map(
+                                        symbol =>
+                                            StockScanner
+                                                .marketService
+                                                .normalizeSymbol(
+                                                    symbol
+                                                )
+                                    )
+                                    .filter(
+                                        Boolean
+                                    );
+
+                        }
+
+                    }
+                );
+
+            }
+
+        }
+        catch (error) {
+
+            console.warn(
+                "[Watchlist] Unable to load saved watchlists.",
+                error
+            );
+
+        }
+
+    },
+
+
+    save() {
+
+        try {
+
+            localStorage.setItem(
+                this.storageKey,
+                JSON.stringify(
+                    this.lists
+                )
+            );
+
+        }
+        catch (error) {
+
+            console.warn(
+                "[Watchlist] Unable to save watchlists.",
+                error
+            );
+
+        }
+
     },
 
 
     bindTabs() {
 
         document
-            .querySelectorAll(".watchlist-tab")
-            .forEach(tab => {
+            .querySelectorAll(
+                ".watchlist-tab"
+            )
+            .forEach(
+                tab => {
 
-                tab.addEventListener(
-                    "click",
-                    () => {
+                    tab.addEventListener(
+                        "click",
+                        () => {
 
-                        this.switchTo(
-                            tab.dataset.watchlist
-                        );
+                            this.switchTo(
+                                tab.dataset
+                                    .watchlist
+                            );
 
-                    }
-                );
+                        }
+                    );
 
-            });
+                }
+            );
 
     },
 
 
     bindButtons() {
 
-        document
-            .getElementById(
+        const add =
+            document.getElementById(
                 "addWatchlistButton"
-            )
-            .addEventListener(
-                "click",
-                () => this.addSelected()
             );
 
 
-        document
-            .getElementById(
+        const remove =
+            document.getElementById(
                 "removeWatchlistButton"
-            )
-            .addEventListener(
-                "click",
-                () => this.removeSelected()
             );
+
+
+        if (add) {
+
+            add.addEventListener(
+                "click",
+                () =>
+                    this.addSelected()
+            );
+
+        }
+
+
+        if (remove) {
+
+            remove.addEventListener(
+                "click",
+                () =>
+                    this.removeSelected()
+            );
+
+        }
 
     },
 
@@ -67,25 +215,34 @@ StockScanner.watchlist = {
     switchTo(name) {
 
         if (
-            !StockScanner.data.watchlists[name]
+            !this.lists[name]
         ) {
+
             return;
+
         }
 
 
-        this.active = name;
+        this.active =
+            name;
 
 
         document
-            .querySelectorAll(".watchlist-tab")
-            .forEach(tab => {
+            .querySelectorAll(
+                ".watchlist-tab"
+            )
+            .forEach(
+                tab => {
 
-                tab.classList.toggle(
-                    "active",
-                    tab.dataset.watchlist === name
-                );
+                    tab.classList.toggle(
+                        "active",
+                        tab.dataset
+                            .watchlist ===
+                            name
+                    );
 
-            });
+                }
+            );
 
 
         const activeTab =
@@ -94,17 +251,30 @@ StockScanner.watchlist = {
             );
 
 
-        document.getElementById(
-            "activeWatchlistTitle"
-        ).textContent =
-            activeTab
-                ? activeTab.textContent.trim()
-                : name.toUpperCase();
+        const title =
+            document.getElementById(
+                "activeWatchlistTitle"
+            );
+
+
+        if (title) {
+
+            title.textContent =
+                activeTab
+                    ? activeTab
+                        .textContent
+                        .trim()
+                    : name
+                        .toUpperCase();
+
+        }
 
 
         this.render();
 
         this.updateButtons();
+
+        this.refreshActive();
 
     },
 
@@ -112,7 +282,9 @@ StockScanner.watchlist = {
     addSelected() {
 
         const symbol =
-            StockScanner.ticker.selectedSymbol;
+            StockScanner.ticker
+                ?.selectedSymbol;
+
 
         if (!symbol) {
             return;
@@ -120,14 +292,36 @@ StockScanner.watchlist = {
 
 
         const list =
-            StockScanner.data.watchlists[
+            this.lists[
                 this.active
             ];
 
 
-        if (!list.includes(symbol)) {
+        if (
+            !list.includes(
+                symbol
+            )
+        ) {
 
-            list.push(symbol);
+            list.push(
+                symbol
+            );
+
+
+            this.save();
+
+        }
+
+
+        if (
+            StockScanner.ticker
+                ?.selectedQuote
+        ) {
+
+            this.updateQuote(
+                StockScanner.ticker
+                    .selectedQuote
+            );
 
         }
 
@@ -136,20 +330,28 @@ StockScanner.watchlist = {
 
         this.updateButtons();
 
+        this.refreshSymbol(
+            symbol
+        );
+
     },
 
 
     removeSelected() {
 
         const symbol =
-            StockScanner.ticker.selectedSymbol;
+            StockScanner.ticker
+                ?.selectedSymbol;
+
 
         if (!symbol) {
             return;
         }
 
 
-        this.remove(symbol);
+        this.remove(
+            symbol
+        );
 
     },
 
@@ -157,18 +359,28 @@ StockScanner.watchlist = {
     remove(symbol) {
 
         const list =
-            StockScanner.data.watchlists[
+            this.lists[
                 this.active
             ];
 
 
         const index =
-            list.indexOf(symbol);
+            list.indexOf(
+                symbol
+            );
 
 
-        if (index !== -1) {
+        if (
+            index !== -1
+        ) {
 
-            list.splice(index, 1);
+            list.splice(
+                index,
+                1
+            );
+
+
+            this.save();
 
         }
 
@@ -186,9 +398,12 @@ StockScanner.watchlist = {
             return false;
         }
 
-        return StockScanner.data.watchlists[
+
+        return this.lists[
             this.active
-        ].includes(symbol);
+        ].includes(
+            symbol
+        );
 
     },
 
@@ -196,7 +411,8 @@ StockScanner.watchlist = {
     updateButtons() {
 
         const symbol =
-            StockScanner.ticker.selectedSymbol;
+            StockScanner.ticker
+                ?.selectedSymbol;
 
 
         const add =
@@ -211,10 +427,23 @@ StockScanner.watchlist = {
             );
 
 
+        if (
+            !add ||
+            !remove
+        ) {
+
+            return;
+
+        }
+
+
         if (!symbol) {
 
-            add.disabled = true;
-            remove.disabled = true;
+            add.disabled =
+                true;
+
+            remove.disabled =
+                true;
 
             return;
 
@@ -222,12 +451,131 @@ StockScanner.watchlist = {
 
 
         const exists =
-            this.contains(symbol);
+            this.contains(
+                symbol
+            );
 
 
-        add.disabled = exists;
+        add.disabled =
+            exists;
 
-        remove.disabled = !exists;
+
+        remove.disabled =
+            !exists;
+
+    },
+
+
+    updateQuote(quote) {
+
+        const symbol =
+            StockScanner
+                .marketService
+                .normalizeSymbol(
+                    quote?.symbol
+                );
+
+
+        if (!symbol) {
+            return;
+        }
+
+
+        this.quotes[
+            symbol
+        ] = quote;
+
+
+        if (
+            this.lists[
+                this.active
+            ].includes(
+                symbol
+            )
+        ) {
+
+            this.render();
+
+        }
+
+    },
+
+
+    async refreshActive() {
+
+        const symbols =
+            [
+                ...this.lists[
+                    this.active
+                ]
+            ];
+
+
+        if (!symbols.length) {
+            return;
+        }
+
+
+        await Promise.allSettled(
+
+            symbols.map(
+                symbol =>
+                    this.refreshSymbol(
+                        symbol
+                    )
+            )
+
+        );
+
+
+        this.render();
+
+    },
+
+
+    async refreshSymbol(symbol) {
+
+        try {
+
+            const quote =
+                await StockScanner
+                    .marketService
+                    .getQuote(
+                        symbol
+                    );
+
+
+            this.quotes[
+                symbol
+            ] = quote;
+
+
+            return quote;
+
+        }
+        catch (error) {
+
+            console.warn(
+                `[Watchlist] ${symbol}`,
+                error
+            );
+
+
+            this.quotes[
+                symbol
+            ] = {
+
+                symbol,
+
+                error:
+                    true
+
+            };
+
+
+            return null;
+
+        }
 
     },
 
@@ -240,151 +588,283 @@ StockScanner.watchlist = {
             );
 
 
+        if (!body) {
+            return;
+        }
+
+
         const symbols =
-            StockScanner.data.watchlists[
+            this.lists[
                 this.active
             ];
 
 
-        body.innerHTML = "";
+        body.innerHTML =
+            "";
 
 
-        document.getElementById(
-            "watchlistCount"
-        ).textContent =
-            `${symbols.length} STOCK${
-                symbols.length === 1 ? "" : "S"
-            }`;
+        const count =
+            document.getElementById(
+                "watchlistCount"
+            );
+
+
+        if (count) {
+
+            count.textContent =
+                `${symbols.length} STOCK${
+                    symbols.length === 1
+                        ? ""
+                        : "S"
+                }`;
+
+        }
 
 
         if (!symbols.length) {
 
             body.innerHTML = `
+
                 <tr class="empty-row">
+
                     <td colspan="7">
                         No stocks in this watchlist.
                     </td>
+
                 </tr>
             `;
+
 
             return;
 
         }
 
 
-        symbols.forEach(symbol => {
+        symbols.forEach(
+            symbol => {
 
-            const stock =
-    StockScanner.data.stocks.find(
-        item =>
-            item.symbol === symbol
-    );
-
-
-            if (!stock) {
-                return;
-            }
+                const stock =
+                    this.quotes[
+                        symbol
+                    ];
 
 
-            const row =
-                document.createElement("tr");
-
-
-            row.innerHTML = `
-
-                <td>
-                    <strong>
-                        ${stock.symbol}
-                    </strong>
-                </td>
-
-                <td>
-                    $${stock.price.toFixed(2)}
-                </td>
-
-                <td class="
-                    ${
-                        stock.change >= 0
-                        ? "positive"
-                        : "negative"
-                    }
-                ">
-                    ${
-                        stock.change >= 0
-                        ? "+"
-                        : ""
-                    }
-                    ${stock.change.toFixed(2)}%
-                </td>
-
-                <td>
-                    ${stock.setup}
-                </td>
-
-                <td>
-                    ${stock.setupStatus}
-                </td>
-
-                <td>
-                    ${stock.catalyst}
-                </td>
-
-                <td>
-                    <button
-                        class="danger-button
-                               watchlist-row-remove"
-                        data-symbol="${stock.symbol}"
-                    >
-                        REMOVE
-                    </button>
-                </td>
-
-            `;
-
-
-            row.addEventListener(
-                "click",
-                event => {
-
-                    if (
-                        event.target.closest(
-                            ".watchlist-row-remove"
-                        )
-                    ) {
-                        return;
-                    }
-
-                    StockScanner.ticker.select(
-                        stock.symbol
+                const row =
+                    document.createElement(
+                        "tr"
                     );
 
-                }
-            );
+
+                const price =
+                    this.numberOrNull(
+                        stock?.price
+                    );
 
 
-            const removeButton =
-                row.querySelector(
-                    ".watchlist-row-remove"
+                const change =
+                    this.numberOrNull(
+                        stock?.changePercent
+                    );
+
+
+                row.innerHTML = `
+
+                    <td>
+                        <strong>
+                            ${this.escapeHTML(symbol)}
+                        </strong>
+                    </td>
+
+                    <td>
+                        ${
+                            price !== null
+                                ? this.formatPrice(
+                                    price
+                                )
+                                : stock?.error
+                                    ? "ERROR"
+                                    : "LOADING..."
+                        }
+                    </td>
+
+                    <td class="${
+                        change === null
+                            ? ""
+                            : change >= 0
+                                ? "positive"
+                                : "negative"
+                    }">
+
+                        ${
+                            change !== null
+                                ? `${
+                                    change >= 0
+                                        ? "+"
+                                        : ""
+                                  }${change.toFixed(2)}%`
+                                : "---"
+                        }
+
+                    </td>
+
+                    <td>
+                        ---
+                    </td>
+
+                    <td>
+                        LIVE
+                    </td>
+
+                    <td>
+                        ---
+                    </td>
+
+                    <td>
+
+                        <button
+                            class="danger-button watchlist-row-remove"
+                            data-symbol="${this.escapeHTML(symbol)}"
+                        >
+                            REMOVE
+                        </button>
+
+                    </td>
+                `;
+
+
+                row.addEventListener(
+                    "click",
+                    event => {
+
+                        if (
+                            event.target.closest(
+                                ".watchlist-row-remove"
+                            )
+                        ) {
+
+                            return;
+
+                        }
+
+
+                        StockScanner.ticker
+                            .select(
+                                symbol
+                            );
+
+                    }
                 );
 
 
-            removeButton.addEventListener(
-                "click",
-                event => {
+                const removeButton =
+                    row.querySelector(
+                        ".watchlist-row-remove"
+                    );
 
-                    event.stopPropagation();
 
-                    this.remove(
-                        stock.symbol
+                if (removeButton) {
+
+                    removeButton.addEventListener(
+                        "click",
+                        event => {
+
+                            event.stopPropagation();
+
+
+                            this.remove(
+                                symbol
+                            );
+
+                        }
                     );
 
                 }
+
+
+                body.appendChild(
+                    row
+                );
+
+            }
+        );
+
+    },
+
+
+    numberOrNull(value) {
+
+        if (
+            value === undefined ||
+            value === null ||
+            value === ""
+        ) {
+
+            return null;
+
+        }
+
+
+        const number =
+            Number(value);
+
+
+        return Number.isFinite(number)
+            ? number
+            : null;
+
+    },
+
+
+    formatPrice(value) {
+
+        if (
+            value >= 1
+        ) {
+
+            return `$${value.toFixed(2)}`;
+
+        }
+
+
+        if (
+            value >= 0.01
+        ) {
+
+            return `$${value.toFixed(3)}`;
+
+        }
+
+
+        return `$${value.toFixed(4)}`;
+
+    },
+
+
+    escapeHTML(value) {
+
+        return String(
+            value ?? ""
+        )
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
             );
-
-
-            body.appendChild(row);
-
-        });
 
     }
 
