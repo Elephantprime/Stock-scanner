@@ -2,6 +2,10 @@
    STOCK SCANNER APPLICATION CONTROLLER
    ========================================================= */
 
+window.StockScanner =
+    window.StockScanner || {};
+
+
 StockScanner.app = {
 
     async init() {
@@ -15,27 +19,44 @@ StockScanner.app = {
 
         StockScanner.patterns.init();
 
-StockScanner.watchlist.init();
+        StockScanner.watchlist.init();
 
-StockScanner.search.init();
-       
-await Promise.all([
-    StockScanner.marketPulse.init(),
-    StockScanner.news.init(),
-    StockScanner.scanner.init()
-]);
+        StockScanner.search.init();
+
+        StockScanner.chart.init();
+
+
+        await Promise.all([
+
+            StockScanner.marketPulse.init(),
+
+            StockScanner.news.init(),
+
+            StockScanner.scanner.init()
+
+        ]);
+
 
         /*
-         Start with first scanner candidate selected.
+         Select the first LIVE scanner result.
+
+         No demo-stock dependency.
         */
 
+        const firstLiveStock =
+            StockScanner.scanner
+                ?.filteredStocks?.[0] ||
+            StockScanner.scanner
+                ?.stocks?.[0] ||
+            null;
+
+
         if (
-            StockScanner.data.stocks.length
+            firstLiveStock?.symbol
         ) {
 
             StockScanner.ticker.select(
-                StockScanner.data.stocks[0]
-                    .symbol
+                firstLiveStock.symbol
             );
 
         }
@@ -51,26 +72,40 @@ await Promise.all([
             );
 
 
-        const update = () => {
+        if (!clock) {
+            return;
+        }
 
-            const now =
-                new Date();
+
+        const update =
+            () => {
+
+                const now =
+                    new Date();
 
 
-            clock.textContent =
-                now.toLocaleTimeString(
-                    [],
-                    {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit"
-                    }
-                );
+                clock.textContent =
+                    now.toLocaleTimeString(
+                        [],
+                        {
 
-        };
+                            hour:
+                                "2-digit",
+
+                            minute:
+                                "2-digit",
+
+                            second:
+                                "2-digit"
+
+                        }
+                    );
+
+            };
 
 
         update();
+
 
         setInterval(
             update,
@@ -104,26 +139,34 @@ await Promise.all([
             .querySelectorAll(
                 "[data-close-drawer]"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.addEventListener(
-                    "click",
-                    () =>
-                        this.closeDrawers()
-                );
+                    button.addEventListener(
+                        "click",
+                        () =>
+                            this.closeDrawers()
+                    );
 
-            });
+                }
+            );
 
 
-        document
-            .getElementById(
+        const backdrop =
+            document.getElementById(
                 "drawerBackdrop"
-            )
-            .addEventListener(
+            );
+
+
+        if (backdrop) {
+
+            backdrop.addEventListener(
                 "click",
                 () =>
                     this.closeDrawers()
             );
+
+        }
 
 
         document.addEventListener(
@@ -131,7 +174,8 @@ await Promise.all([
             event => {
 
                 if (
-                    event.key === "Escape"
+                    event.key ===
+                    "Escape"
                 ) {
 
                     this.closeDrawers();
@@ -149,15 +193,24 @@ await Promise.all([
         drawerId
     ) {
 
-        document
-            .getElementById(buttonId)
-            .addEventListener(
-                "click",
-                () =>
-                    this.openDrawer(
-                        drawerId
-                    )
+        const button =
+            document.getElementById(
+                buttonId
             );
+
+
+        if (!button) {
+            return;
+        }
+
+
+        button.addEventListener(
+            "click",
+            () =>
+                this.openDrawer(
+                    drawerId
+                )
+        );
 
     },
 
@@ -167,20 +220,34 @@ await Promise.all([
         this.closeDrawers();
 
 
-        document
-            .getElementById(drawerId)
-            .classList.remove(
-                "hidden"
+        const drawer =
+            document.getElementById(
+                drawerId
             );
 
 
-        document
-            .getElementById(
+        const backdrop =
+            document.getElementById(
                 "drawerBackdrop"
-            )
-            .classList.remove(
+            );
+
+
+        if (drawer) {
+
+            drawer.classList.remove(
                 "hidden"
             );
+
+        }
+
+
+        if (backdrop) {
+
+            backdrop.classList.remove(
+                "hidden"
+            );
+
+        }
 
     },
 
@@ -188,49 +255,75 @@ await Promise.all([
     closeDrawers() {
 
         document
-            .querySelectorAll(".drawer")
-            .forEach(drawer => {
-
-                drawer.classList.add(
-                    "hidden"
-                );
-
-            });
-
-
-        document
-            .getElementById(
-                "drawerBackdrop"
+            .querySelectorAll(
+                ".drawer"
             )
-            .classList.add(
+            .forEach(
+                drawer => {
+
+                    drawer.classList.add(
+                        "hidden"
+                    );
+
+                }
+            );
+
+
+        const backdrop =
+            document.getElementById(
+                "drawerBackdrop"
+            );
+
+
+        if (backdrop) {
+
+            backdrop.classList.add(
                 "hidden"
             );
+
+        }
 
     },
 
 
     bindWatchlistNavigation() {
 
-        document
-            .getElementById(
+        const previous =
+            document.getElementById(
                 "watchlistPrev"
-            )
-            .addEventListener(
-                "click",
-                () =>
-                    this.moveWatchlist(-1)
             );
 
 
-        document
-            .getElementById(
+        const next =
+            document.getElementById(
                 "watchlistNext"
-            )
-            .addEventListener(
+            );
+
+
+        if (previous) {
+
+            previous.addEventListener(
                 "click",
                 () =>
-                    this.moveWatchlist(1)
+                    this.moveWatchlist(
+                        -1
+                    )
             );
+
+        }
+
+
+        if (next) {
+
+            next.addEventListener(
+                "click",
+                () =>
+                    this.moveWatchlist(
+                        1
+                    )
+            );
+
+        }
 
     },
 
@@ -258,10 +351,13 @@ await Promise.all([
             );
 
 
-        current += direction;
+        current +=
+            direction;
 
 
-        if (current < 0) {
+        if (
+            current < 0
+        ) {
 
             current =
                 tabs.length - 1;
@@ -270,24 +366,24 @@ await Promise.all([
 
 
         if (
-            current >= tabs.length
+            current >=
+            tabs.length
         ) {
 
-            current = 0;
+            current =
+                0;
 
         }
 
 
-        tabs[current].click();
+        tabs[
+            current
+        ].click();
 
     }
 
 };
 
-
-/* =========================================================
-   START APPLICATION
-   ========================================================= */
 
 document.addEventListener(
     "DOMContentLoaded",
