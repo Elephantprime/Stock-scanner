@@ -1,15 +1,11 @@
 /* =========================================================
    STOCK SCANNER — LIVE MARKET SERVICE
 
-   PURPOSE:
-   Single provider-independent interface between
-   the browser application and our Vercel APIs.
+   Single interface between browser modules and
+   server-side Vercel APIs.
 
-   IMPORTANT:
-   - Production data path is LIVE ONLY.
-   - No silent demo fallback.
-   - If a live service is unavailable, the UI receives
-     an explicit error.
+   LIVE ONLY.
+   NO SILENT DEMO FALLBACK.
    ========================================================= */
 
 window.StockScanner =
@@ -45,10 +41,6 @@ StockScanner.marketService = {
     },
 
 
-    /* =====================================================
-       SERVICE STATUS
-    ===================================================== */
-
     isLive() {
 
         return true;
@@ -80,10 +72,6 @@ StockScanner.marketService = {
     },
 
 
-    /* =====================================================
-       QUOTE
-    ===================================================== */
-
     async getQuote(symbol) {
 
         symbol =
@@ -110,44 +98,14 @@ StockScanner.marketService = {
     },
 
 
-    /* =====================================================
-       MOVERS / SCANNER
-    ===================================================== */
-
     async getMovers(
         options = {}
     ) {
 
-        const query =
-            new URLSearchParams();
-
-
-        Object.entries(
-            options
-        ).forEach(
-            ([key, value]) => {
-
-                if (
-                    value !== undefined &&
-                    value !== null &&
-                    value !== ""
-                ) {
-
-                    query.set(
-                        key,
-                        String(value)
-                    );
-
-                }
-
-            }
-        );
-
-
         const suffix =
-            query.toString()
-                ? `?${query.toString()}`
-                : "";
+            this.buildQuery(
+                options
+            );
 
 
         const response =
@@ -157,11 +115,6 @@ StockScanner.marketService = {
 
             );
 
-
-        /*
-         API returns metadata + stocks.
-         Scanner only needs the stock array.
-        */
 
         if (
             Array.isArray(response)
@@ -188,17 +141,9 @@ StockScanner.marketService = {
     },
 
 
-    /* =====================================================
-       CANDLES
-
-       This route does not exist yet.
-
-       There is intentionally NO fake fallback.
-    ===================================================== */
-
     async getCandles(
         symbol,
-        timeframe = "1m",
+        timeframe = "5m",
         limit = 200
     ) {
 
@@ -239,14 +184,6 @@ StockScanner.marketService = {
     },
 
 
-    /* =====================================================
-       MARKET PULSE
-
-       Will become live when /api/market is created.
-
-       No demo fallback.
-    ===================================================== */
-
     async getMarketPulse() {
 
         return this.request(
@@ -256,48 +193,14 @@ StockScanner.marketService = {
     },
 
 
-    /* =====================================================
-       MARKET NEWS
-
-       Will become live when /api/news is created.
-
-       No demo fallback.
-    ===================================================== */
-
     async getMarketNews(
         options = {}
     ) {
 
-        const query =
-            new URLSearchParams();
-
-
-        Object.entries(
-            options
-        ).forEach(
-            ([key, value]) => {
-
-                if (
-                    value !== undefined &&
-                    value !== null &&
-                    value !== ""
-                ) {
-
-                    query.set(
-                        key,
-                        String(value)
-                    );
-
-                }
-
-            }
-        );
-
-
         const suffix =
-            query.toString()
-                ? `?${query.toString()}`
-                : "";
+            this.buildQuery(
+                options
+            );
 
 
         return this.request(
@@ -308,10 +211,6 @@ StockScanner.marketService = {
 
     },
 
-
-    /* =====================================================
-       TICKER NEWS
-    ===================================================== */
 
     async getTickerNews(
         symbol,
@@ -333,16 +232,28 @@ StockScanner.marketService = {
         }
 
 
+        return this.request(
+
+            `${this.endpoints.tickerNews}${this.buildQuery({
+                symbol,
+                ...options
+            })}`
+
+        );
+
+    },
+
+
+    buildQuery(
+        values = {}
+    ) {
+
         const query =
-            new URLSearchParams({
-
-                symbol
-
-            });
+            new URLSearchParams();
 
 
         Object.entries(
-            options
+            values
         ).forEach(
             ([key, value]) => {
 
@@ -363,18 +274,16 @@ StockScanner.marketService = {
         );
 
 
-        return this.request(
+        const text =
+            query.toString();
 
-            `${this.endpoints.tickerNews}?${query.toString()}`
 
-        );
+        return text
+            ? `?${text}`
+            : "";
 
     },
 
-
-    /* =====================================================
-       GENERIC LIVE REQUEST
-    ===================================================== */
 
     async request(
         url,
@@ -426,7 +335,8 @@ StockScanner.marketService = {
                 );
 
 
-            let data = null;
+            let data =
+                null;
 
 
             try {
@@ -460,6 +370,16 @@ StockScanner.marketService = {
                             : JSON.stringify(
                                 data.error
                             );
+
+                }
+                else if (
+                    data?.message
+                ) {
+
+                    message =
+                        String(
+                            data.message
+                        );
 
                 }
 
@@ -512,10 +432,6 @@ StockScanner.marketService = {
 
     },
 
-
-    /* =====================================================
-       SYMBOL NORMALIZATION
-    ===================================================== */
 
     normalizeSymbol(symbol) {
 
