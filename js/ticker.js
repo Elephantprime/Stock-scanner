@@ -3,47 +3,46 @@
 
    LIVE DATA ONLY
 
-   Market data source:
+   Quote:
    StockScanner.marketService
 
-   Analysis data will later come from the live
-   scanner / pattern-analysis engine.
+   Chart:
+   StockScanner.chart
 
-   Demo analysis is intentionally NOT used here.
+   Pattern/trade analysis will be connected to the
+   candle-analysis engine later.
    ========================================================= */
 
-window.StockScanner = window.StockScanner || {};
+window.StockScanner =
+    window.StockScanner || {};
 
 
 StockScanner.ticker = {
 
-    selectedSymbol: null,
+    selectedSymbol:
+        null,
 
-    selectedQuote: null,
+    selectedQuote:
+        null,
 
-    requestId: 0,
+    requestId:
+        0,
 
-
-    /* =====================================================
-       SELECT TICKER
-    ===================================================== */
 
     async select(symbol) {
 
         symbol =
-            StockScanner.marketService
-                .normalizeSymbol(symbol);
+            StockScanner
+                .marketService
+                .normalizeSymbol(
+                    symbol
+                );
 
 
         if (!symbol) {
             return;
         }
 
-
-        /*
-         Incrementing request ID prevents an older,
-         slower request from overwriting a newer ticker.
-        */
 
         const requestId =
             ++this.requestId;
@@ -52,18 +51,9 @@ StockScanner.ticker = {
         this.selectedSymbol =
             symbol;
 
-
         this.selectedQuote =
             null;
 
-
-        /*
-         Clear EVERYTHING belonging to the previous stock
-         before requesting the new one.
-
-         This prevents stale NVDA data from appearing
-         underneath AAPL, APPL, etc.
-        */
 
         this.resetWorkspace(
             symbol
@@ -75,30 +65,41 @@ StockScanner.ticker = {
         );
 
 
+        /*
+         Chart and quote are independent live requests.
+
+         The chart can begin loading immediately instead
+         of waiting for the quote request to finish.
+        */
+
+        if (
+            StockScanner.chart &&
+            typeof StockScanner.chart.load ===
+                "function"
+        ) {
+
+            StockScanner.chart.load(
+                symbol
+            );
+
+        }
+
+
         try {
 
             const quote =
-                await StockScanner.marketService
-                    .getQuote(symbol);
+                await StockScanner
+                    .marketService
+                    .getQuote(
+                        symbol
+                    );
 
-
-            /*
-             Ignore stale response.
-            */
 
             if (
                 requestId !==
-                this.requestId
-            ) {
-
-                return;
-
-            }
-
-
-            if (
+                    this.requestId ||
                 this.selectedSymbol !==
-                symbol
+                    symbol
             ) {
 
                 return;
@@ -115,41 +116,32 @@ StockScanner.ticker = {
             );
 
 
-            /*
-             Until the live analysis engine is connected,
-             explicitly show analysis as pending.
-
-             We DO NOT pull analysis from demo-data.js.
-            */
-
             this.showAnalysisPending();
 
 
-            /*
-             Watchlist buttons may depend on selectedSymbol.
-            */
-
             if (
                 StockScanner.watchlist &&
-                typeof StockScanner.watchlist
-                    .updateButtons === "function"
+                typeof StockScanner
+                    .watchlist
+                    .updateQuote ===
+                    "function"
             ) {
 
                 StockScanner.watchlist
-                    .updateButtons();
+                    .updateQuote(
+                        quote
+                    );
 
             }
 
         }
         catch (error) {
 
-            /*
-             Ignore an error from an obsolete request.
-            */
-
             if (
                 requestId !==
-                this.requestId
+                    this.requestId ||
+                this.selectedSymbol !==
+                    symbol
             ) {
 
                 return;
@@ -173,11 +165,15 @@ StockScanner.ticker = {
                 "Unable to load market data."
             );
 
+        }
+        finally {
 
             if (
                 StockScanner.watchlist &&
-                typeof StockScanner.watchlist
-                    .updateButtons === "function"
+                typeof StockScanner
+                    .watchlist
+                    .updateButtons ===
+                    "function"
             ) {
 
                 StockScanner.watchlist
@@ -190,17 +186,7 @@ StockScanner.ticker = {
     },
 
 
-    /* =====================================================
-       RENDER LIVE QUOTE
-    ===================================================== */
-
     renderQuote(stock) {
-
-        const symbol =
-            stock.symbol ||
-            this.selectedSymbol ||
-            "---";
-
 
         const price =
             this.numberOrNull(
@@ -226,54 +212,42 @@ StockScanner.ticker = {
             );
 
 
-        /* -------------------------------------------------
-           IDENTITY
-        ------------------------------------------------- */
-
         this.setText(
             "tickerSymbol",
-            symbol
+            stock.symbol ||
+            this.selectedSymbol ||
+            "---"
         );
 
 
         /*
-         Company-name metadata is not yet supplied by our
-         quote endpoint.
-
-         If company becomes available later, this already
-         supports it.
+         Alpaca snapshot does not provide company name.
+         We therefore display the symbol rather than
+         pretending we have company metadata.
         */
 
         this.setText(
             "tickerCompany",
             stock.company ||
-            symbol
+            "Live market data"
         );
 
 
-        /* -------------------------------------------------
-           PRICE
-        ------------------------------------------------- */
-
         this.setText(
             "tickerPrice",
-            price !== null
-                ? this.formatPrice(price)
-                : "$---"
+            this.formatPrice(
+                price
+            )
         );
 
 
         this.setText(
             "metricPrice",
-            price !== null
-                ? this.formatPrice(price)
-                : "---"
+            this.formatPrice(
+                price
+            )
         );
 
-
-        /* -------------------------------------------------
-           DAILY CHANGE
-        ------------------------------------------------- */
 
         const changeElement =
             document.getElementById(
@@ -284,95 +258,67 @@ StockScanner.ticker = {
         if (changeElement) {
 
             if (
-                changePercent !== null
+                changePercent === null
             ) {
 
                 changeElement.textContent =
-                    (
-                        changePercent >= 0
-                            ? "+"
-                            : ""
-                    ) +
-                    changePercent.toFixed(2) +
-                    "%";
-
+                    "---";
 
                 changeElement.className =
-                    "ticker-change " +
-                    (
-                        changePercent >= 0
-                            ? "positive"
-                            : "negative"
-                    );
+                    "ticker-change";
 
             }
             else {
 
                 changeElement.textContent =
-                    "--%";
+                    `${
+                        changePercent >= 0
+                            ? "+"
+                            : ""
+                    }${changePercent.toFixed(2)}%`;
 
 
                 changeElement.className =
-                    "ticker-change";
+                    `ticker-change ${
+                        changePercent >= 0
+                            ? "positive"
+                            : "negative"
+                    }`;
 
             }
 
         }
 
 
-        /* -------------------------------------------------
-           VOLUME
-        ------------------------------------------------- */
-
         this.setText(
             "metricVolume",
-            volume !== null
-                ? this.formatVolume(
-                    volume
-                  )
-                : "---"
+            this.formatVolume(
+                volume
+            )
         );
 
-
-        /* -------------------------------------------------
-           VWAP
-
-           Snapshot daily bar currently supplies this.
-        ------------------------------------------------- */
 
         this.setText(
             "metricVWAP",
-            vwap !== null
-                ? this.formatPrice(
-                    vwap
-                  )
-                : "---"
+            this.formatPrice(
+                vwap
+            )
         );
 
 
-        /* -------------------------------------------------
-           RELATIVE VOLUME
+        const rvol =
+            this.numberOrNull(
+                stock.relativeVolume
+            );
 
-           Not fabricated.
-
-           Requires historical average-volume data.
-        ------------------------------------------------- */
 
         this.setText(
             "metricRelVolume",
-            stock.relativeVolume != null
-                ? Number(
-                    stock.relativeVolume
-                  ).toFixed(1) + "×"
+            rvol !== null
+                ? `${rvol.toFixed(2)}×`
                 : "---"
         );
 
-
-        /* -------------------------------------------------
-           MOMENTUM
-
-           Will be calculated by analysis engine.
-        ------------------------------------------------- */
 
         this.setText(
             "metricMomentum",
@@ -381,12 +327,6 @@ StockScanner.ticker = {
         );
 
 
-        /* -------------------------------------------------
-           VOLATILITY
-
-           Will require historical/intraday bars.
-        ------------------------------------------------- */
-
         this.setText(
             "metricVolatility",
             stock.volatility ||
@@ -394,18 +334,9 @@ StockScanner.ticker = {
         );
 
 
-        /*
-         Store useful live fields on the selected quote.
-
-         These aren't all displayed yet, but they're now
-         available to the upcoming analysis engine.
-        */
-
         this.selectedQuote = {
 
             ...stock,
-
-            symbol,
 
             price,
 
@@ -465,20 +396,11 @@ StockScanner.ticker = {
     },
 
 
-    /* =====================================================
-       RESET WORKSPACE
-
-       Called BEFORE every new ticker request.
-
-       This is what prevents stale data from the previous
-       ticker surviving a failed lookup.
-    ===================================================== */
-
     resetWorkspace(symbol) {
 
         this.setText(
             "tickerSymbol",
-            symbol || "---"
+            symbol
         );
 
 
@@ -490,7 +412,7 @@ StockScanner.ticker = {
 
         this.setText(
             "tickerPrice",
-            "$---"
+            "---"
         );
 
 
@@ -503,7 +425,7 @@ StockScanner.ticker = {
         if (change) {
 
             change.textContent =
-                "--%";
+                "---";
 
             change.className =
                 "ticker-change";
@@ -511,39 +433,22 @@ StockScanner.ticker = {
         }
 
 
-        this.setText(
+        [
             "metricPrice",
-            "---"
-        );
-
-
-        this.setText(
             "metricVolume",
-            "---"
-        );
-
-
-        this.setText(
             "metricRelVolume",
-            "---"
-        );
-
-
-        this.setText(
             "metricVWAP",
-            "---"
-        );
-
-
-        this.setText(
             "metricMomentum",
-            "---"
-        );
+            "metricVolatility"
+        ].forEach(
+            id => {
 
+                this.setText(
+                    id,
+                    "---"
+                );
 
-        this.setText(
-            "metricVolatility",
-            "---"
+            }
         );
 
 
@@ -551,10 +456,6 @@ StockScanner.ticker = {
 
     },
 
-
-    /* =====================================================
-       LOADING STATE
-    ===================================================== */
 
     showLoading(symbol) {
 
@@ -578,20 +479,10 @@ StockScanner.ticker = {
     },
 
 
-    /* =====================================================
-       ERROR STATE
-
-       No old quote or analysis values survive.
-    ===================================================== */
-
     showError(
         symbol,
         message
     ) {
-
-        this.selectedQuote =
-            null;
-
 
         this.setText(
             "tickerSymbol",
@@ -601,71 +492,45 @@ StockScanner.ticker = {
 
         this.setText(
             "tickerCompany",
-            message ||
-            "Market data unavailable"
+            message
         );
 
 
         this.setText(
             "tickerPrice",
-            "$---"
+            "---"
         );
 
 
-        const change =
-            document.getElementById(
-                "tickerChange"
-            );
-
-
-        if (change) {
-
-            change.textContent =
-                "--%";
-
-            change.className =
-                "ticker-change";
-
-        }
-
-
         this.setText(
+            "tickerChange",
+            "---"
+        );
+
+
+        [
             "metricPrice",
-            "---"
-        );
-
-
-        this.setText(
             "metricVolume",
-            "---"
-        );
-
-
-        this.setText(
             "metricRelVolume",
-            "---"
-        );
-
-
-        this.setText(
             "metricVWAP",
-            "---"
-        );
-
-
-        this.setText(
             "metricMomentum",
-            "---"
+            "metricVolatility"
+        ].forEach(
+            id => {
+
+                this.setText(
+                    id,
+                    "---"
+                );
+
+            }
         );
 
 
         this.setText(
-            "metricVolatility",
-            "---"
+            "detectedSetup",
+            "None"
         );
-
-
-        this.clearAnalysis();
 
 
         this.setText(
@@ -674,22 +539,29 @@ StockScanner.ticker = {
         );
 
 
-        this.setText(
-            "whyNowContent",
-            "Unable to analyze this ticker because live market data was not returned."
-        );
+        const why =
+            document.getElementById(
+                "whyNowContent"
+            );
+
+
+        if (why) {
+
+            why.innerHTML = `
+
+                <p>
+                    Unable to analyze this ticker because
+                    live quote data was not returned.
+                </p>
+            `;
+
+        }
+
+
+        this.clearTradePlan();
 
     },
 
-
-    /* =====================================================
-       LIVE ANALYSIS PLACEHOLDER
-
-       This intentionally does NOT use demo data.
-
-       The next analysis layer will populate these fields
-       from real market data.
-    ===================================================== */
 
     showAnalysisPending() {
 
@@ -701,24 +573,35 @@ StockScanner.ticker = {
 
         this.setText(
             "setupStatus",
-            "Live analysis pending"
+            "Live candle analysis pending"
         );
 
 
-        this.setText(
-            "whyNowContent",
-            "Live quote loaded. Waiting for the market-analysis engine."
-        );
+        const why =
+            document.getElementById(
+                "whyNowContent"
+            );
+
+
+        if (why) {
+
+            why.innerHTML = `
+
+                <p>
+                    Live quote and chart data are loading.
+                    Pattern confirmation and trade-plan
+                    logic will use these candles when the
+                    analysis engine is connected.
+                </p>
+            `;
+
+        }
 
 
         this.clearTradePlan();
 
     },
 
-
-    /* =====================================================
-       CLEAR ANALYSIS
-    ===================================================== */
 
     clearAnalysis() {
 
@@ -734,10 +617,22 @@ StockScanner.ticker = {
         );
 
 
-        this.setText(
-            "whyNowContent",
-            "No live setup analysis available."
-        );
+        const why =
+            document.getElementById(
+                "whyNowContent"
+            );
+
+
+        if (why) {
+
+            why.innerHTML = `
+
+                <p>
+                    No live setup analysis available.
+                </p>
+            `;
+
+        }
 
 
         this.clearTradePlan();
@@ -745,53 +640,33 @@ StockScanner.ticker = {
     },
 
 
-    /* =====================================================
-       CLEAR TRADE PLAN
-    ===================================================== */
-
     clearTradePlan() {
 
-        this.setText(
+        [
             "tradeEntry",
-            "---"
-        );
-
-
-        this.setText(
             "tradeStop",
-            "---"
-        );
-
-
-        this.setText(
             "tradeTarget1",
-            "---"
-        );
-
-
-        this.setText(
             "tradeTarget2",
-            "---"
-        );
+            "riskReward"
+        ].forEach(
+            id => {
 
+                this.setText(
+                    id,
+                    "---"
+                );
 
-        this.setText(
-            "riskReward",
-            "---"
+            }
         );
 
     },
 
 
-    /* =====================================================
-       NUMBER HELPER
-    ===================================================== */
-
     numberOrNull(value) {
 
         if (
-            value === null ||
             value === undefined ||
+            value === null ||
             value === ""
         ) {
 
@@ -804,18 +679,12 @@ StockScanner.ticker = {
             Number(value);
 
 
-        return Number.isFinite(
-            number
-        )
+        return Number.isFinite(number)
             ? number
             : null;
 
     },
 
-
-    /* =====================================================
-       PRICE FORMATTER
-    ===================================================== */
 
     formatPrice(value) {
 
@@ -834,17 +703,28 @@ StockScanner.ticker = {
         }
 
 
-        return (
-            "$" +
-            number.toFixed(2)
-        );
+        if (
+            number >= 1
+        ) {
+
+            return `$${number.toFixed(2)}`;
+
+        }
+
+
+        if (
+            number >= 0.01
+        ) {
+
+            return `$${number.toFixed(3)}`;
+
+        }
+
+
+        return `$${number.toFixed(4)}`;
 
     },
 
-
-    /* =====================================================
-       VOLUME FORMATTER
-    ===================================================== */
 
     formatVolume(volume) {
 
@@ -902,10 +782,6 @@ StockScanner.ticker = {
 
     },
 
-
-    /* =====================================================
-       SAFE DOM HELPER
-    ===================================================== */
 
     setText(
         id,
