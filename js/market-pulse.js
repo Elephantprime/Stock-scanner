@@ -1,24 +1,33 @@
 /* =========================================================
-   MARKET PULSE
-   Data source: StockScanner.marketService
+   STOCK SCANNER — LIVE MARKET PULSE
    ========================================================= */
+
+window.StockScanner =
+    window.StockScanner || {};
+
 
 StockScanner.marketPulse = {
 
     async init() {
 
+        this.clear();
+
+
         try {
 
             const data =
-                await StockScanner.marketService
+                await StockScanner
+                    .marketService
                     .getMarketPulse();
 
-            this.render(data);
+
+            this.render(
+                data || {}
+            );
+
 
             this.setStatus(
-                StockScanner.marketService.isLive()
-                    ? "LIVE"
-                    : "DEMO"
+                "LIVE"
             );
 
         }
@@ -29,9 +38,32 @@ StockScanner.marketPulse = {
                 error
             );
 
-            this.setStatus("ERROR");
+
+            this.clear();
+
+            this.setStatus(
+                "ERROR"
+            );
 
         }
+
+    },
+
+
+    clear() {
+
+        document
+            .querySelectorAll(
+                ".pulse-item strong"
+            )
+            .forEach(
+                element => {
+
+                    element.textContent =
+                        "---";
+
+                }
+            );
 
     },
 
@@ -44,76 +76,142 @@ StockScanner.marketPulse = {
             );
 
 
-        items.forEach(item => {
+        items.forEach(
+            item => {
 
-            const label =
-                item.querySelector("span");
-
-            const value =
-                item.querySelector("strong");
-
-            if (!label || !value) {
-                return;
-            }
+                const label =
+                    item.querySelector(
+                        "span"
+                    );
 
 
-            const name =
-                label.textContent.trim();
+                const value =
+                    item.querySelector(
+                        "strong"
+                    );
 
 
-            if (data[name]) {
+                if (
+                    !label ||
+                    !value
+                ) {
 
-                const market =
-                    data[name];
+                    return;
 
-                value.innerHTML = `
+                }
 
-                    ${Number(
-                        market.price
-                    ).toFixed(2)}
 
-                    <span class="
+                const name =
+                    label.textContent
+                        .trim();
+
+
+                if (
+                    [
+                        "SPY",
+                        "QQQ",
+                        "IWM"
+                    ].includes(
+                        name
+                    )
+                ) {
+
+                    const market =
+                        data[name];
+
+
+                    const price =
+                        this.numberOrNull(
+                            market?.price
+                        );
+
+
+                    const change =
+                        this.numberOrNull(
+                            market?.change
+                        );
+
+
+                    if (
+                        price === null
+                    ) {
+
+                        value.textContent =
+                            "---";
+
+                        return;
+
+                    }
+
+
+                    value.innerHTML = `
+
+                        ${this.formatPrice(price)}
+
                         ${
-                            market.change >= 0
-                                ? "positive"
-                                : "negative"
-                        }
-                    ">
-                        ${
-                            market.change >= 0
-                                ? "+"
+                            change !== null
+                                ? `
+                                    <span class="${
+                                        change >= 0
+                                            ? "positive"
+                                            : "negative"
+                                    }">
+                                        ${
+                                            change >= 0
+                                                ? "+"
+                                                : ""
+                                        }${change.toFixed(2)}%
+                                    </span>
+                                  `
                                 : ""
                         }
+                    `;
 
-                        ${Number(
-                            market.change
-                        ).toFixed(2)}%
-                    </span>
-                `;
+
+                    return;
+
+                }
+
+
+                if (
+                    name === "VIX"
+                ) {
+
+                    value.textContent =
+                        "N/A";
+
+                    return;
+
+                }
+
+
+                if (
+                    name ===
+                    "ADV / DEC"
+                ) {
+
+                    value.textContent =
+                        data.advanceDecline ||
+                        "N/A";
+
+                    return;
+
+                }
+
+
+                if (
+                    name ===
+                    "LEADING SECTOR"
+                ) {
+
+                    value.textContent =
+                        data.leadingSector ||
+                        "N/A";
+
+                }
 
             }
-
-
-            if (name === "ADV / DEC") {
-
-                value.textContent =
-                    data.advanceDecline ||
-                    "---";
-
-            }
-
-
-            if (
-                name === "LEADING SECTOR"
-            ) {
-
-                value.textContent =
-                    data.leadingSector ||
-                    "---";
-
-            }
-
-        });
+        );
 
     },
 
@@ -125,28 +223,85 @@ StockScanner.marketPulse = {
                 "#systemStatus span"
             );
 
-        elements.forEach(element => {
 
-            if (
-                element.textContent
-                    .trim()
-                    .startsWith("MARKET")
-            ) {
+        elements.forEach(
+            element => {
+
+                if (
+                    !element.textContent
+                        .trim()
+                        .startsWith(
+                            "MARKET"
+                        )
+                ) {
+
+                    return;
+
+                }
+
 
                 const indicator =
-                    element.querySelector("b");
+                    element.querySelector(
+                        "b"
+                    );
+
+
+                if (!indicator) {
+                    return;
+                }
+
 
                 indicator.textContent =
                     status;
 
+
                 indicator.className =
-                    status === "ERROR"
-                        ? "status-off"
-                        : "status-ready";
+                    status === "LIVE"
+                        ? "status-ready"
+                        : "status-off";
 
             }
+        );
 
-        });
+    },
+
+
+    numberOrNull(value) {
+
+        if (
+            value === undefined ||
+            value === null ||
+            value === ""
+        ) {
+
+            return null;
+
+        }
+
+
+        const number =
+            Number(value);
+
+
+        return Number.isFinite(number)
+            ? number
+            : null;
+
+    },
+
+
+    formatPrice(value) {
+
+        if (
+            value >= 100
+        ) {
+
+            return value.toFixed(2);
+
+        }
+
+
+        return value.toFixed(2);
 
     }
 
