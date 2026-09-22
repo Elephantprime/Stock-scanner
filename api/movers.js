@@ -7,17 +7,21 @@
    Alpaca market-movers screener discovers symbols.
 
    Stage 2:
-   Alpaca snapshots enrich those symbols with:
-   - latest price
-   - daily change
-   - volume
-   - VWAP
-   - day high / low
-   - bid / ask
-   - spread
+   Alpaca IEX snapshots enrich those symbols.
+
+   This layer performs DATA-QUALITY filtering only.
+
+   User trading preferences such as:
+   - minimum price
+   - minimum volume
+   - minimum move
+   - maximum spread
+
+   belong in js/scanner.js.
 
    NO DEMO FALLBACK.
    ========================================================= */
+
 
 export default async function handler(req, res) {
 
@@ -48,7 +52,7 @@ export default async function handler(req, res) {
 
 
     const requestedTop =
-        Number(req.query.top || 20);
+        Number(req.query.top || 30);
 
 
     const top =
@@ -56,7 +60,7 @@ export default async function handler(req, res) {
             Math.max(
                 Number.isFinite(requestedTop)
                     ? Math.floor(requestedTop)
-                    : 20,
+                    : 30,
                 5
             ),
             50
@@ -80,11 +84,13 @@ export default async function handler(req, res) {
     try {
 
         /* =================================================
-           STEP 1 — DISCOVER MARKET MOVERS
+           STEP 1 — DISCOVER MOVERS
         ================================================= */
 
         const moversUrl =
-            `https://data.alpaca.markets/v1beta1/screener/stocks/movers?top=${top}`;
+            "https://data.alpaca.markets/" +
+            "v1beta1/screener/stocks/movers" +
+            `?top=${top}`;
 
 
         const moversResponse =
@@ -114,7 +120,7 @@ export default async function handler(req, res) {
                 return res.status(403).json({
 
                     error:
-                        "Alpaca market movers requires market-data access not available to the current account."
+                        "Alpaca market movers is not available to the current market-data account."
 
                 });
 
@@ -168,8 +174,7 @@ export default async function handler(req, res) {
 
 
         /*
-         Merge gainers and losers while preventing
-         duplicate symbols.
+         Merge both sides and remove duplicate symbols.
         */
 
         const moverMap =
@@ -192,6 +197,26 @@ export default async function handler(req, res) {
             }
 
 
+            /*
+             Alpaca's mover feed can contain warrants.
+
+             Five-character symbols ending in W are very
+             commonly warrant symbols.
+
+             We deliberately keep this rule narrow so that
+             ordinary equities are not broadly excluded.
+            */
+
+            if (
+                isLikelyWarrantSymbol(
+                    symbol
+                )
+            ) {
+
+                return;
+            }
+
+
             moverMap.set(
                 symbol,
                 {
@@ -199,7 +224,7 @@ export default async function handler(req, res) {
                     symbol,
 
                     moverPrice:
-                        numberOrNull(
+                        positiveNumberOrNull(
                             item.price
                         ),
 
@@ -228,31 +253,44 @@ export default async function handler(req, res) {
         if (!discovered.length) {
 
             return res.status(200).json({
+
                 stocks: [],
+
                 count: 0,
-                source: "alpaca",
-                discovery: "market-movers",
-                feed: "live"
+
+                source:
+                    "alpaca",
+
+                discovery:
+                    "market-movers",
+
+                feed:
+                    "iex",
+
+                generatedAt:
+                    new Date().toISOString()
+
             });
 
         }
 
 
         /* =================================================
-           STEP 2 — ENRICH WITH SNAPSHOTS
-
-           We explicitly request IEX because that's the
-           live feed currently available to this build.
+           STEP 2 — LIVE IEX SNAPSHOTS
         ================================================= */
 
         const symbols =
             discovered
-                .map(item => item.symbol)
+                .map(
+                    item =>
+                        item.symbol
+                )
                 .join(",");
 
 
         const snapshotUrl =
-            "https://data.alpaca.markets/v2/stocks/snapshots" +
+            "https://data.alpaca.markets/" +
+            "v2/stocks/snapshots" +
             `?symbols=${encodeURIComponent(symbols)}` +
             "&feed=iex";
 
@@ -277,6 +315,20 @@ export default async function handler(req, res) {
             );
 
 
+            if (
+                snapshotResponse.status === 429
+            ) {
+
+                return res.status(429).json({
+
+                    error:
+                        "Market snapshot rate limit reached. Try again shortly."
+
+                });
+
+            }
+
+
             return res
                 .status(snapshotResponse.status)
                 .json({
@@ -294,7 +346,7 @@ export default async function handler(req, res) {
 
 
         /* =================================================
-           NORMALIZE RESULTS
+           STEP 3 — NORMALIZE + VALIDATE
         ================================================= */
 
         const stocks =
@@ -304,7 +356,17 @@ export default async function handler(req, res) {
                     const snapshot =
                         snapshots[
                             mover.symbol
-                        ] || {};
+                        ] || null;
+
+
+                    /*
+                     If Alpaca did not return a snapshot,
+                     don't send the symbol downstream.
+                    */
+
+                    if (!snapshot) {
+                        return null;
+                    }
 
 
                     const trade =
@@ -327,18 +389,32 @@ export default async function handler(req, res) {
                         null;
 
 
-                    const price =
-                        numberOrNull(
+                    const tradePrice =
+                        positiveNumberOrNull(
                             trade?.p
-                        ) ??
-                        numberOrNull(
+                        );
+
+
+                    const dailyClose =
+                        positiveNumberOrNull(
                             daily?.c
-                        ) ??
+                        );
+
+
+                    const price =
+                        tradePrice ??
+                        dailyClose ??
                         mover.moverPrice;
 
 
+                    /*
+                     Zero, negative, missing or otherwise
+                     invalid prices are unusable.
+                    */
+
                     if (
-                        price === null
+                        price === null ||
+                        price <= 0
                     ) {
 
                         return null;
@@ -347,18 +423,28 @@ export default async function handler(req, res) {
 
 
                     const previousClose =
-                        numberOrNull(
+                        positiveNumberOrNull(
                             previous?.c
                         );
 
 
-                    let change = null;
-                    let changePercent = null;
+                    let change =
+                        null;
 
+
+                    let changePercent =
+                        null;
+
+
+                    /*
+                     Prefer snapshot-derived change.
+
+                     Only use the screener's percentage when
+                     a valid previous daily close is absent.
+                    */
 
                     if (
-                        previousClose !== null &&
-                        previousClose !== 0
+                        previousClose !== null
                     ) {
 
                         change =
@@ -385,6 +471,36 @@ export default async function handler(req, res) {
                     }
 
 
+                    /*
+                     Reject non-finite calculations.
+                    */
+
+                    if (
+                        changePercent !== null &&
+                        !Number.isFinite(
+                            changePercent
+                        )
+                    ) {
+
+                        changePercent =
+                            null;
+
+                    }
+
+
+                    if (
+                        change !== null &&
+                        !Number.isFinite(
+                            change
+                        )
+                    ) {
+
+                        change =
+                            null;
+
+                    }
+
+
                     const bid =
                         positiveNumberOrNull(
                             quote?.bp
@@ -397,8 +513,12 @@ export default async function handler(req, res) {
                         );
 
 
-                    let spread = null;
-                    let spreadPercent = null;
+                    let spread =
+                        null;
+
+
+                    let spreadPercent =
+                        null;
 
 
                     if (
@@ -434,13 +554,82 @@ export default async function handler(req, res) {
                     }
 
 
-                    /*
-                     We are NOT fabricating relative volume.
+                    const volume =
+                        positiveNumberOrZero(
+                            daily?.v
+                        );
 
-                     That requires historical average
-                     volume, which we'll calculate when
-                     the bars/history layer is connected.
+
+                    const vwap =
+                        positiveNumberOrNull(
+                            daily?.vw
+                        );
+
+
+                    const timestamp =
+                        trade?.t ||
+                        quote?.t ||
+                        daily?.t ||
+                        null;
+
+
+                    const freshness =
+                        classifyFreshness(
+                            timestamp
+                        );
+
+
+                    /*
+                     Completely stale securities are not
+                     useful to a live opportunity scanner.
+
+                     LAST_SESSION is intentionally retained
+                     because the scanner must still work
+                     outside regular market hours.
                     */
+
+                    if (
+                        freshness ===
+                        "STALE"
+                    ) {
+
+                        return null;
+
+                    }
+
+
+                    /*
+                     Huge percentages are not automatically
+                     deleted.
+
+                     A legitimate split/repricing can create
+                     unusual values. Instead we mark them as
+                     suspicious so the browser can avoid
+                     treating them as ordinary momentum.
+
+                     This is important: we do NOT silently
+                     rewrite market data.
+                    */
+
+                    const dataQuality =
+                        classifyDataQuality({
+
+                            price,
+
+                            previousClose,
+
+                            changePercent,
+
+                            volume,
+
+                            bid,
+
+                            ask,
+
+                            spreadPercent
+
+                        });
+
 
                     return {
 
@@ -456,32 +645,26 @@ export default async function handler(req, res) {
                         previousClose,
 
                         open:
-                            numberOrNull(
+                            positiveNumberOrNull(
                                 daily?.o
                             ),
 
                         high:
-                            numberOrNull(
+                            positiveNumberOrNull(
                                 daily?.h
                             ),
 
                         low:
-                            numberOrNull(
+                            positiveNumberOrNull(
                                 daily?.l
                             ),
 
-                        volume:
-                            numberOrNull(
-                                daily?.v
-                            ) ?? 0,
+                        volume,
 
-                        vwap:
-                            numberOrNull(
-                                daily?.vw
-                            ),
+                        vwap,
 
                         tradeCount:
-                            numberOrNull(
+                            positiveNumberOrZero(
                                 daily?.n
                             ),
 
@@ -493,35 +676,48 @@ export default async function handler(req, res) {
 
                         spreadPercent,
 
+
+                        /*
+                         Do not fabricate RVOL.
+
+                         Historical average volume is needed
+                         before this metric is legitimate.
+                        */
+
                         relativeVolume:
                             null,
+
 
                         momentum:
                             deriveMomentum(
                                 price,
-                                numberOrNull(
-                                    daily?.vw
-                                ),
+                                vwap,
                                 changePercent
                             ),
 
+
                         /*
-                         Pattern engine is not connected yet.
+                         Pattern engine is intentionally
+                         separate from the market-data API.
                         */
 
                         setup:
                             "Analyzing",
 
+
                         setupStatus:
-                            "LIVE",
+                            freshness,
+
 
                         catalyst:
                             "---",
 
-                        timestamp:
-                            trade?.t ||
-                            daily?.t ||
-                            null,
+
+                        timestamp,
+
+                        freshness,
+
+                        dataQuality,
 
                         source:
                             "alpaca",
@@ -533,18 +729,49 @@ export default async function handler(req, res) {
 
                 })
                 .filter(Boolean)
+
+
+                /*
+                 Put clean data ahead of questionable data.
+
+                 Within each group, rank by absolute move.
+                */
+
                 .sort(
-                    (a, b) =>
-                        Math.abs(
-                            Number(
-                                b.changePercent || 0
+                    (a, b) => {
+
+                        const qualityDifference =
+                            qualityRank(
+                                a.dataQuality
+                            ) -
+                            qualityRank(
+                                b.dataQuality
+                            );
+
+
+                        if (
+                            qualityDifference !== 0
+                        ) {
+
+                            return qualityDifference;
+
+                        }
+
+
+                        return (
+                            Math.abs(
+                                Number(
+                                    b.changePercent || 0
+                                )
+                            ) -
+                            Math.abs(
+                                Number(
+                                    a.changePercent || 0
+                                )
                             )
-                        ) -
-                        Math.abs(
-                            Number(
-                                a.changePercent || 0
-                            )
-                        )
+                        );
+
+                    }
                 );
 
 
@@ -591,7 +818,7 @@ export default async function handler(req, res) {
 
 
 /* =========================================================
-   HELPERS
+   SYMBOL HELPERS
 ========================================================= */
 
 function normalizeSymbol(symbol) {
@@ -608,6 +835,34 @@ function normalizeSymbol(symbol) {
 
 }
 
+
+/*
+ Five-character-plus symbols ending in W are
+ commonly warrants in the Alpaca mover feed.
+
+ Examples observed in the scanner:
+ MSAIW
+ GLNDW
+ SDAWW
+
+ Keep the heuristic intentionally narrow.
+*/
+
+function isLikelyWarrantSymbol(
+    symbol
+) {
+
+    return (
+        symbol.length >= 5 &&
+        symbol.endsWith("W")
+    );
+
+}
+
+
+/* =========================================================
+   NUMBER HELPERS
+========================================================= */
 
 function numberOrNull(value) {
 
@@ -636,7 +891,9 @@ function numberOrNull(value) {
 function positiveNumberOrNull(value) {
 
     const number =
-        numberOrNull(value);
+        numberOrNull(
+            value
+        );
 
 
     return (
@@ -648,6 +905,243 @@ function positiveNumberOrNull(value) {
 
 }
 
+
+function positiveNumberOrZero(value) {
+
+    const number =
+        numberOrNull(
+            value
+        );
+
+
+    return (
+        number !== null &&
+        number > 0
+    )
+        ? number
+        : 0;
+
+}
+
+
+/* =========================================================
+   FRESHNESS
+========================================================= */
+
+function classifyFreshness(
+    timestamp
+) {
+
+    if (!timestamp) {
+
+        /*
+         No timestamp means we cannot establish
+         real-time freshness.
+        */
+
+        return "UNKNOWN";
+
+    }
+
+
+    const time =
+        new Date(
+            timestamp
+        ).getTime();
+
+
+    if (
+        !Number.isFinite(time)
+    ) {
+
+        return "UNKNOWN";
+
+    }
+
+
+    const age =
+        Date.now() -
+        time;
+
+
+    /*
+     15 minutes:
+     genuinely recent data.
+
+     7 days:
+     permits prior-session data across weekends
+     and holidays.
+
+     Older:
+     unsuitable for live scanning.
+    */
+
+    if (
+        age <=
+        15 * 60 * 1000
+    ) {
+
+        return "LIVE";
+
+    }
+
+
+    if (
+        age <=
+        7 * 24 * 60 * 60 * 1000
+    ) {
+
+        return "LAST SESSION";
+
+    }
+
+
+    return "STALE";
+
+}
+
+
+/* =========================================================
+   DATA QUALITY
+========================================================= */
+
+function classifyDataQuality({
+
+    price,
+    previousClose,
+    changePercent,
+    volume,
+    bid,
+    ask,
+    spreadPercent
+
+}) {
+
+    /*
+     Missing previous close makes the percentage
+     less independently verifiable.
+    */
+
+    if (
+        previousClose === null
+    ) {
+
+        return "CHECK";
+
+    }
+
+
+    /*
+     Extremely large daily moves are retained but
+     flagged instead of blindly trusted.
+    */
+
+    if (
+        changePercent !== null &&
+        Math.abs(
+            changePercent
+        ) >= 500
+    ) {
+
+        return "CHECK";
+
+    }
+
+
+    /*
+     No reported session volume is poor scanner
+     data regardless of user liquidity settings.
+    */
+
+    if (
+        volume <= 0
+    ) {
+
+        return "CHECK";
+
+    }
+
+
+    /*
+     Broken quote.
+    */
+
+    if (
+        bid !== null &&
+        ask !== null &&
+        ask < bid
+    ) {
+
+        return "CHECK";
+
+    }
+
+
+    /*
+     A gigantic quoted spread is not necessarily
+     invalid, especially in illiquid securities,
+     so retain and flag it.
+    */
+
+    if (
+        spreadPercent !== null &&
+        spreadPercent >= 50
+    ) {
+
+        return "CHECK";
+
+    }
+
+
+    /*
+     Penny-priced securities are not removed here.
+     Price preference belongs in Scan Settings.
+    */
+
+    if (
+        price <= 0
+    ) {
+
+        return "CHECK";
+
+    }
+
+
+    return "OK";
+
+}
+
+
+function qualityRank(
+    quality
+) {
+
+    if (
+        quality === "OK"
+    ) {
+
+        return 0;
+
+    }
+
+
+    if (
+        quality === "CHECK"
+    ) {
+
+        return 1;
+
+    }
+
+
+    return 2;
+
+}
+
+
+/* =========================================================
+   MOMENTUM
+========================================================= */
 
 function deriveMomentum(
     price,
@@ -706,4 +1200,4 @@ function deriveMomentum(
 
     return "NEUTRAL";
 
-                              }
+                       }
