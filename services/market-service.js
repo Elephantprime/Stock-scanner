@@ -1,168 +1,81 @@
 /* =========================================================
-   STOCK SCANNER — MARKET SERVICE
+   STOCK SCANNER — LIVE MARKET SERVICE
 
    PURPOSE:
-   Single interface between the application and market data.
+   Single provider-independent interface between
+   the browser application and our Vercel APIs.
 
-   The UI NEVER needs to know which market-data provider
-   is being used.
-
-   HYBRID MODE:
-   Each service can independently use LIVE or DEMO data.
-
-   Current configuration:
-   - Quotes       = LIVE
-   - Candles      = DEMO
-   - Movers       = DEMO
-   - Market Pulse = DEMO
-   - News         = DEMO
+   IMPORTANT:
+   - Production data path is LIVE ONLY.
+   - No silent demo fallback.
+   - If a live service is unavailable, the UI receives
+     an explicit error.
    ========================================================= */
 
-window.StockScanner = window.StockScanner || {};
+window.StockScanner =
+    window.StockScanner || {};
 
 
 StockScanner.marketService = {
 
-    /* -----------------------------------------------------
-       CONFIGURATION
-    ----------------------------------------------------- */
-
-    mode: "HYBRID",
-
-    liveServices: {
-        quotes: true,
-        candles: false,
-        movers: false,
-        marketPulse: false,
-        news: false
-    },
+    mode:
+        "LIVE",
 
 
     endpoints: {
 
-        quote: "/api/quotes",
+        quote:
+            "/api/quotes",
 
-        candles: "/api/candles",
+        candles:
+            "/api/candles",
 
-        movers: "/api/movers",
+        movers:
+            "/api/movers",
 
-        marketPulse: "/api/market",
+        marketPulse:
+            "/api/market",
 
-        marketNews: "/api/news",
+        marketNews:
+            "/api/news",
 
-        tickerNews: "/api/news"
+        tickerNews:
+            "/api/news"
 
     },
 
 
     /* =====================================================
-       MODE CONTROL
+       SERVICE STATUS
     ===================================================== */
 
-    setMode(mode) {
-
-        const normalized =
-            String(mode).toUpperCase();
-
-
-        if (
-            normalized !== "DEMO" &&
-            normalized !== "LIVE" &&
-            normalized !== "HYBRID"
-        ) {
-
-            console.error(
-                "Invalid market service mode:",
-                mode
-            );
-
-            return false;
-        }
-
-
-        this.mode = normalized;
-
-
-        /*
-         DEMO turns every live service off.
-         LIVE turns every live service on.
-         HYBRID preserves individual service settings.
-        */
-
-        if (normalized === "DEMO") {
-
-            Object.keys(
-                this.liveServices
-            ).forEach(key => {
-
-                this.liveServices[key] =
-                    false;
-
-            });
-
-        }
-
-
-        if (normalized === "LIVE") {
-
-            Object.keys(
-                this.liveServices
-            ).forEach(key => {
-
-                this.liveServices[key] =
-                    true;
-
-            });
-
-        }
-
-
-        console.log(
-            `[MarketService] Mode: ${this.mode}`
-        );
-
+    isLive() {
 
         return true;
 
     },
 
 
-    /* -----------------------------------------------------
-       Determine whether a specific service is live.
+    setMode(mode) {
 
-       Examples:
+        if (
+            String(mode)
+                .toUpperCase() !==
+            "LIVE"
+        ) {
 
-       isLive("quotes")
-       isLive("news")
-
-       Calling isLive() with no service returns true if
-       ANY service is currently live.
-    ----------------------------------------------------- */
-
-    isLive(service = null) {
-
-        if (this.mode === "DEMO") {
-            return false;
-        }
-
-
-        if (this.mode === "LIVE") {
-            return true;
-        }
-
-
-        if (service) {
-
-            return Boolean(
-                this.liveServices?.[service]
+            console.warn(
+                "[MarketService] Production service is LIVE only."
             );
 
         }
 
 
-        return Object.values(
-            this.liveServices || {}
-        ).some(Boolean);
+        this.mode =
+            "LIVE";
+
+
+        return true;
 
     },
 
@@ -174,7 +87,9 @@ StockScanner.marketService = {
     async getQuote(symbol) {
 
         symbol =
-            this.normalizeSymbol(symbol);
+            this.normalizeSymbol(
+                symbol
+            );
 
 
         if (!symbol) {
@@ -186,28 +101,99 @@ StockScanner.marketService = {
         }
 
 
-        /*
-         Quotes are currently LIVE.
-        */
-
-        if (!this.isLive("quotes")) {
-
-            return this.getDemoQuote(
-                symbol
-            );
-
-        }
-
-
         return this.request(
+
             `${this.endpoints.quote}?symbol=${encodeURIComponent(symbol)}`
+
         );
 
     },
 
 
     /* =====================================================
+       MOVERS / SCANNER
+    ===================================================== */
+
+    async getMovers(
+        options = {}
+    ) {
+
+        const query =
+            new URLSearchParams();
+
+
+        Object.entries(
+            options
+        ).forEach(
+            ([key, value]) => {
+
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                ) {
+
+                    query.set(
+                        key,
+                        String(value)
+                    );
+
+                }
+
+            }
+        );
+
+
+        const suffix =
+            query.toString()
+                ? `?${query.toString()}`
+                : "";
+
+
+        const response =
+            await this.request(
+
+                `${this.endpoints.movers}${suffix}`
+
+            );
+
+
+        /*
+         API returns metadata + stocks.
+         Scanner only needs the stock array.
+        */
+
+        if (
+            Array.isArray(response)
+        ) {
+
+            return response;
+
+        }
+
+
+        if (
+            Array.isArray(
+                response?.stocks
+            )
+        ) {
+
+            return response.stocks;
+
+        }
+
+
+        return [];
+
+    },
+
+
+    /* =====================================================
        CANDLES
+
+       This route does not exist yet.
+
+       There is intentionally NO fake fallback.
     ===================================================== */
 
     async getCandles(
@@ -217,28 +203,15 @@ StockScanner.marketService = {
     ) {
 
         symbol =
-            this.normalizeSymbol(symbol);
+            this.normalizeSymbol(
+                symbol
+            );
 
 
         if (!symbol) {
 
             throw new Error(
                 "Ticker symbol required."
-            );
-
-        }
-
-
-        /*
-         Candles remain DEMO until /api/candles exists.
-        */
-
-        if (!this.isLive("candles")) {
-
-            return this.getDemoCandles(
-                symbol,
-                timeframe,
-                limit
             );
 
         }
@@ -251,71 +224,16 @@ StockScanner.marketService = {
 
                 timeframe,
 
-                limit: String(limit)
+                limit:
+                    String(limit)
 
             });
 
 
         return this.request(
-            `${this.endpoints.candles}?${query}`
-        );
 
-    },
+            `${this.endpoints.candles}?${query.toString()}`
 
-
-    /* =====================================================
-       MARKET MOVERS / SCANNER INPUT
-    ===================================================== */
-
-    async getMovers(options = {}) {
-
-        /*
-         Scanner universe remains DEMO until
-         /api/movers exists.
-        */
-
-        if (!this.isLive("movers")) {
-
-            return this.getDemoMovers(
-                options
-            );
-
-        }
-
-
-        const query =
-            new URLSearchParams();
-
-
-        Object.entries(options)
-            .forEach(
-                ([key, value]) => {
-
-                    if (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    ) {
-
-                        query.set(
-                            key,
-                            String(value)
-                        );
-
-                    }
-
-                }
-            );
-
-
-        const suffix =
-            query.toString()
-                ? `?${query}`
-                : "";
-
-
-        return this.request(
-            `${this.endpoints.movers}${suffix}`
         );
 
     },
@@ -323,21 +241,13 @@ StockScanner.marketService = {
 
     /* =====================================================
        MARKET PULSE
+
+       Will become live when /api/market is created.
+
+       No demo fallback.
     ===================================================== */
 
     async getMarketPulse() {
-
-        /*
-         Market Pulse remains DEMO until
-         /api/market exists.
-        */
-
-        if (!this.isLive("marketPulse")) {
-
-            return this.getDemoMarketPulse();
-
-        }
-
 
         return this.request(
             this.endpoints.marketPulse
@@ -348,58 +258,52 @@ StockScanner.marketService = {
 
     /* =====================================================
        MARKET NEWS
+
+       Will become live when /api/news is created.
+
+       No demo fallback.
     ===================================================== */
 
     async getMarketNews(
         options = {}
     ) {
 
-        /*
-         News remains DEMO until /api/news exists.
-        */
-
-        if (!this.isLive("news")) {
-
-            return this.getDemoMarketNews(
-                options
-            );
-
-        }
-
-
         const query =
             new URLSearchParams();
 
 
-        Object.entries(options)
-            .forEach(
-                ([key, value]) => {
+        Object.entries(
+            options
+        ).forEach(
+            ([key, value]) => {
 
-                    if (
-                        value !== undefined &&
-                        value !== null &&
-                        value !== ""
-                    ) {
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                ) {
 
-                        query.set(
-                            key,
-                            String(value)
-                        );
-
-                    }
+                    query.set(
+                        key,
+                        String(value)
+                    );
 
                 }
-            );
+
+            }
+        );
 
 
         const suffix =
             query.toString()
-                ? `?${query}`
+                ? `?${query.toString()}`
                 : "";
 
 
         return this.request(
+
             `${this.endpoints.marketNews}${suffix}`
+
         );
 
     },
@@ -415,7 +319,9 @@ StockScanner.marketService = {
     ) {
 
         symbol =
-            this.normalizeSymbol(symbol);
+            this.normalizeSymbol(
+                symbol
+            );
 
 
         if (!symbol) {
@@ -427,44 +333,47 @@ StockScanner.marketService = {
         }
 
 
-        if (!this.isLive("news")) {
-
-            return this.getDemoTickerNews(
-                symbol,
-                options
-            );
-
-        }
-
-
         const query =
             new URLSearchParams({
 
-                symbol,
-
-                ...options
+                symbol
 
             });
 
 
+        Object.entries(
+            options
+        ).forEach(
+            ([key, value]) => {
+
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                ) {
+
+                    query.set(
+                        key,
+                        String(value)
+                    );
+
+                }
+
+            }
+        );
+
+
         return this.request(
-            `${this.endpoints.tickerNews}?${query}`
+
+            `${this.endpoints.tickerNews}?${query.toString()}`
+
         );
 
     },
 
 
     /* =====================================================
-       GENERIC API REQUEST
-
-       Every live request passes through here.
-
-       Gives us one place for:
-       - HTTP errors
-       - JSON errors
-       - timeouts
-       - logging
-       - retry logic later
+       GENERIC LIVE REQUEST
     ===================================================== */
 
     async request(
@@ -478,9 +387,12 @@ StockScanner.marketService = {
 
         const timeout =
             setTimeout(
-                () =>
-                    controller.abort(),
-                10000
+                () => {
+
+                    controller.abort();
+
+                },
+                12000
             );
 
 
@@ -500,7 +412,10 @@ StockScanner.marketService = {
                             "Accept":
                                 "application/json",
 
-                            ...options.headers
+                            ...(
+                                options.headers ||
+                                {}
+                            )
 
                         },
 
@@ -511,43 +426,40 @@ StockScanner.marketService = {
                 );
 
 
+            let data = null;
+
+
+            try {
+
+                data =
+                    await response.json();
+
+            }
+            catch (_) {
+
+                data =
+                    null;
+
+            }
+
+
             if (!response.ok) {
 
                 let message =
                     `API request failed (${response.status})`;
 
 
-                try {
+                if (
+                    data?.error
+                ) {
 
-                    const errorData =
-                        await response.json();
-
-
-                    if (
-                        errorData &&
-                        errorData.error
-                    ) {
-
-                        /*
-                         Ensure we never throw [object Object].
-                        */
-
-                        message =
-                            typeof errorData.error ===
-                            "string"
-                                ? errorData.error
-                                : JSON.stringify(
-                                    errorData.error
-                                  );
-
-                    }
-
-                }
-                catch (_) {
-
-                    /*
-                     Ignore malformed error response.
-                    */
+                    message =
+                        typeof data.error ===
+                        "string"
+                            ? data.error
+                            : JSON.stringify(
+                                data.error
+                            );
 
                 }
 
@@ -559,8 +471,15 @@ StockScanner.marketService = {
             }
 
 
-            const data =
-                await response.json();
+            if (
+                data === null
+            ) {
+
+                throw new Error(
+                    "API returned an invalid response."
+                );
+
+            }
 
 
             return data;
@@ -569,7 +488,7 @@ StockScanner.marketService = {
         catch (error) {
 
             if (
-                error.name ===
+                error?.name ===
                 "AbortError"
             ) {
 
@@ -600,402 +519,15 @@ StockScanner.marketService = {
 
     normalizeSymbol(symbol) {
 
-        if (!symbol) {
-            return "";
-        }
-
-
-        return String(symbol)
+        return String(
+            symbol || ""
+        )
             .trim()
             .toUpperCase()
             .replace(
                 /[^A-Z0-9.\-]/g,
                 ""
             );
-
-    },
-
-
-    /* =====================================================
-       DEMO PROVIDER
-
-       These functions make demo-data.js behave like a
-       market-data provider.
-
-       Live endpoints will eventually return these same
-       normalized data structures.
-    ===================================================== */
-
-
-    getDemoQuote(symbol) {
-
-        const stock =
-            StockScanner.data.stocks.find(
-                item =>
-                    item.symbol === symbol
-            );
-
-
-        if (!stock) {
-
-            throw new Error(
-                `Demo ticker ${symbol} not found.`
-            );
-
-        }
-
-
-        return Promise.resolve({
-
-            symbol:
-                stock.symbol,
-
-            company:
-                stock.company,
-
-            price:
-                stock.price,
-
-            changePercent:
-                stock.change,
-
-            volume:
-                stock.volume,
-
-            relativeVolume:
-                stock.relativeVolume,
-
-            vwap:
-                stock.vwap,
-
-            momentum:
-                stock.momentum,
-
-            volatility:
-                stock.volatility,
-
-            timestamp:
-                Date.now(),
-
-            source:
-                "demo",
-
-            feed:
-                "demo"
-
-        });
-
-    },
-
-
-    /* =====================================================
-       DEMO MOVERS
-    ===================================================== */
-
-    getDemoMovers() {
-
-        const movers =
-            StockScanner.data.stocks.map(
-                stock => ({
-
-                    symbol:
-                        stock.symbol,
-
-                    company:
-                        stock.company,
-
-                    price:
-                        stock.price,
-
-                    changePercent:
-                        stock.change,
-
-                    volume:
-                        stock.volume,
-
-                    relativeVolume:
-                        stock.relativeVolume,
-
-                    vwap:
-                        stock.vwap,
-
-                    setup:
-                        stock.setup,
-
-                    setupStatus:
-                        stock.setupStatus,
-
-                    catalyst:
-                        stock.catalyst
-
-                })
-            );
-
-
-        return Promise.resolve(
-            movers
-        );
-
-    },
-
-
-    /* =====================================================
-       DEMO MARKET PULSE
-    ===================================================== */
-
-    getDemoMarketPulse() {
-
-        return Promise.resolve(
-            StockScanner.data.marketPulse
-        );
-
-    },
-
-
-    /* =====================================================
-       DEMO MARKET NEWS
-    ===================================================== */
-
-    getDemoMarketNews(
-        options = {}
-    ) {
-
-        let news = [
-            ...StockScanner.data.news
-        ];
-
-
-        if (
-            options.type &&
-            options.type !== "all"
-        ) {
-
-            news =
-                news.filter(
-                    item =>
-                        item.type ===
-                        options.type
-                );
-
-        }
-
-
-        return Promise.resolve(
-            news
-        );
-
-    },
-
-
-    /* =====================================================
-       DEMO TICKER NEWS
-    ===================================================== */
-
-    getDemoTickerNews(
-        symbol
-    ) {
-
-        const news =
-            StockScanner.data.news.filter(
-                item =>
-                    item.ticker === symbol
-            );
-
-
-        return Promise.resolve(
-            news
-        );
-
-    },
-
-
-    /* =====================================================
-       DEMO CANDLES
-
-       Temporary generated candles solely for exercising
-       the chart interface.
-
-       These are NOT historical market prices.
-    ===================================================== */
-
-    getDemoCandles(
-        symbol,
-        timeframe,
-        limit
-    ) {
-
-        const stock =
-            StockScanner.data.stocks.find(
-                item =>
-                    item.symbol === symbol
-            );
-
-
-        if (!stock) {
-
-            return Promise.resolve(
-                []
-            );
-
-        }
-
-
-        const candles = [];
-
-
-        const count =
-            Math.min(
-                Math.max(
-                    Number(limit) || 100,
-                    10
-                ),
-                500
-            );
-
-
-        let price =
-            stock.price * 0.97;
-
-
-        const now =
-            Date.now();
-
-
-        const interval =
-            this.timeframeToMilliseconds(
-                timeframe
-            );
-
-
-        for (
-            let i = count - 1;
-            i >= 0;
-            i--
-        ) {
-
-            /*
-             Deterministic demo movement.
-
-             This exists ONLY for chart-development
-             purposes and is not used as real analysis.
-            */
-
-            const wave =
-                Math.sin(
-                    (count - i) / 5
-                ) * 0.003;
-
-
-            const trend =
-                stock.change >= 0
-                    ? 0.0005
-                    : -0.0005;
-
-
-            const open =
-                price;
-
-
-            const close =
-                open *
-                (
-                    1 +
-                    wave +
-                    trend
-                );
-
-
-            const high =
-                Math.max(
-                    open,
-                    close
-                ) * 1.002;
-
-
-            const low =
-                Math.min(
-                    open,
-                    close
-                ) * 0.998;
-
-
-            candles.push({
-
-                time:
-                    now -
-                    (
-                        i *
-                        interval
-                    ),
-
-                open,
-
-                high,
-
-                low,
-
-                close,
-
-                volume:
-                    Math.round(
-                        stock.volume /
-                        count
-                    )
-
-            });
-
-
-            price =
-                close;
-
-        }
-
-
-        return Promise.resolve(
-            candles
-        );
-
-    },
-
-
-    /* =====================================================
-       TIMEFRAME CONVERSION
-    ===================================================== */
-
-    timeframeToMilliseconds(
-        timeframe
-    ) {
-
-        const map = {
-
-            "1m":
-                60 * 1000,
-
-            "5m":
-                5 * 60 * 1000,
-
-            "15m":
-                15 * 60 * 1000,
-
-            "30m":
-                30 * 60 * 1000,
-
-            "1h":
-                60 * 60 * 1000,
-
-            "4h":
-                4 * 60 * 60 * 1000,
-
-            "1d":
-                24 * 60 * 60 * 1000
-
-        };
-
-
-        return (
-            map[timeframe] ||
-            map["1m"]
-        );
 
     }
 
