@@ -1,13 +1,19 @@
 /* =========================================================
-   STOCK SCANNER — LIVE HISTORICAL BARS
+   STOCK SCANNER — ALPACA HISTORICAL CANDLES
 
    SERVER-SIDE VERCEL FUNCTION
 
-   Provider: Alpaca
-   Feed: IEX
+   Current feed:
+   IEX
 
-   Browser requests:
-   /api/candles?symbol=AAPL&timeframe=5m&limit=200
+   Supported application timeframes:
+   - 1m
+   - 5m
+   - 15m
+   - 1h
+   - 1d
+
+   NO DEMO FALLBACK.
    ========================================================= */
 
 export default async function handler(req, res) {
@@ -21,9 +27,53 @@ export default async function handler(req, res) {
     }
 
 
-    /* =====================================================
-       CREDENTIALS
-    ===================================================== */
+    const symbol =
+        normalizeSymbol(
+            req.query.symbol
+        );
+
+
+    if (!symbol) {
+
+        return res.status(400).json({
+            error: "Ticker symbol required"
+        });
+
+    }
+
+
+    const timeframe =
+        normalizeTimeframe(
+            req.query.timeframe
+        );
+
+
+    if (!timeframe) {
+
+        return res.status(400).json({
+            error: "Unsupported candle timeframe"
+        });
+
+    }
+
+
+    const requestedLimit =
+        Number(
+            req.query.limit || 200
+        );
+
+
+    const limit =
+        Math.min(
+            Math.max(
+                Number.isFinite(requestedLimit)
+                    ? Math.floor(requestedLimit)
+                    : 200,
+                20
+            ),
+            1000
+        );
+
 
     const apiKey =
         process.env.ALPACA_API_KEY;
@@ -42,147 +92,38 @@ export default async function handler(req, res) {
     }
 
 
-    /* =====================================================
-       SYMBOL
-    ===================================================== */
-
-    const symbol =
-        normalizeSymbol(
-            req.query.symbol
+    const alpacaTimeframe =
+        toAlpacaTimeframe(
+            timeframe
         );
 
 
-    if (!symbol) {
+    /*
+     Use a sufficiently large calendar lookback so
+     weekends and market holidays don't leave an
+     intraday chart empty.
 
-        return res.status(400).json({
-            error: "Ticker symbol required."
-        });
-
-    }
-
-
-    /* =====================================================
-       TIMEFRAME
-    ===================================================== */
-
-    const requestedTimeframe =
-        String(
-            req.query.timeframe ||
-            "5m"
-        ).toLowerCase();
-
-
-    const timeframeMap = {
-
-        "1m": {
-            alpaca: "1Min",
-            lookbackDays: 2
-        },
-
-        "5m": {
-            alpaca: "5Min",
-            lookbackDays: 5
-        },
-
-        "15m": {
-            alpaca: "15Min",
-            lookbackDays: 10
-        },
-
-        "1h": {
-            alpaca: "1Hour",
-            lookbackDays: 30
-        },
-
-        "1d": {
-            alpaca: "1Day",
-            lookbackDays: 365
-        }
-
-    };
-
-
-    const timeframeConfig =
-        timeframeMap[
-            requestedTimeframe
-        ];
-
-
-    if (!timeframeConfig) {
-
-        return res.status(400).json({
-            error:
-                "Unsupported timeframe. Use 1m, 5m, 15m, 1h, or 1d."
-        });
-
-    }
-
-
-    /* =====================================================
-       LIMIT
-    ===================================================== */
-
-    const requestedLimit =
-        Number(
-            req.query.limit ||
-            200
-        );
-
-
-    const limit =
-        Math.min(
-            Math.max(
-                Number.isFinite(
-                    requestedLimit
-                )
-                    ? Math.floor(
-                        requestedLimit
-                      )
-                    : 200,
-                20
-            ),
-            1000
-        );
-
-
-    /* =====================================================
-       DATE RANGE
-
-       Give Alpaca enough calendar history to return the
-       requested number of trading bars.
-
-       Alpaca still determines which bars actually exist.
-    ===================================================== */
-
-    const end =
-        new Date();
-
+     sort=desc gets the newest bars first. We reverse
+     them before returning so the browser receives
+     chronological candles.
+    */
 
     const start =
         new Date(
-            end.getTime() -
-            (
-                timeframeConfig
-                    .lookbackDays *
-                24 *
-                60 *
-                60 *
-                1000
+            Date.now() -
+            lookbackMilliseconds(
+                timeframe
             )
-        );
+        ).toISOString();
 
 
-    const query =
+    const params =
         new URLSearchParams({
 
             timeframe:
-                timeframeConfig.alpaca,
+                alpacaTimeframe,
 
-            start:
-                start.toISOString(),
-
-            end:
-                end.toISOString(),
+            start,
 
             limit:
                 String(limit),
@@ -200,7 +141,7 @@ export default async function handler(req, res) {
 
 
     const url =
-        `https://data.alpaca.markets/v2/stocks/${encodeURIComponent(symbol)}/bars?${query.toString()}`;
+        `https://data.alpaca.markets/v2/stocks/${encodeURIComponent(symbol)}/bars?${params.toString()}`;
 
 
     try {
@@ -227,10 +168,6 @@ export default async function handler(req, res) {
             );
 
 
-        /* =================================================
-           PROVIDER ERROR
-        ================================================= */
-
         if (!response.ok) {
 
             const providerText =
@@ -244,25 +181,21 @@ export default async function handler(req, res) {
             );
 
 
-            if (
-                response.status === 404
-            ) {
+            if (response.status === 404) {
 
                 return res.status(404).json({
                     error:
-                        `No historical data found for ${symbol}.`
+                        `No candle data found for ${symbol}.`
                 });
 
             }
 
 
-            if (
-                response.status === 429
-            ) {
+            if (response.status === 429) {
 
                 return res.status(429).json({
                     error:
-                        "Historical market-data rate limit reached."
+                        "Market data rate limit reached. Try again shortly."
                 });
 
             }
@@ -273,7 +206,7 @@ export default async function handler(req, res) {
                 .json({
 
                     error:
-                        `Historical market-data provider returned ${response.status}`
+                        `Candle provider returned ${response.status}`
 
                 });
 
@@ -285,91 +218,59 @@ export default async function handler(req, res) {
 
 
         const rawBars =
-            Array.isArray(data.bars)
+            Array.isArray(data?.bars)
                 ? data.bars
                 : [];
 
-
-        /*
-         We requested DESC so that Alpaca gives us the
-         newest bars first.
-
-         The chart wants chronological order.
-        */
 
         const bars =
             rawBars
                 .map(bar => ({
 
-                    time:
-                        bar.t,
-
                     timestamp:
-                        new Date(
-                            bar.t
-                        ).getTime(),
+                        bar.t || null,
 
                     open:
-                        numberOrNull(
-                            bar.o
-                        ),
+                        numberOrNull(bar.o),
 
                     high:
-                        numberOrNull(
-                            bar.h
-                        ),
+                        numberOrNull(bar.h),
 
                     low:
-                        numberOrNull(
-                            bar.l
-                        ),
+                        numberOrNull(bar.l),
 
                     close:
-                        numberOrNull(
-                            bar.c
-                        ),
+                        numberOrNull(bar.c),
 
                     volume:
-                        numberOrNull(
-                            bar.v
-                        ) ?? 0,
-
-                    tradeCount:
-                        numberOrNull(
-                            bar.n
-                        ),
+                        numberOrNull(bar.v) ?? 0,
 
                     vwap:
-                        numberOrNull(
-                            bar.vw
-                        )
+                        numberOrNull(bar.vw),
+
+                    tradeCount:
+                        numberOrNull(bar.n)
 
                 }))
-                .filter(bar =>
+                .filter(bar => {
 
-                    Number.isFinite(
-                        bar.timestamp
-                    ) &&
+                    return (
+                        bar.timestamp &&
+                        bar.open !== null &&
+                        bar.high !== null &&
+                        bar.low !== null &&
+                        bar.close !== null
+                    );
 
-                    bar.open !== null &&
-                    bar.high !== null &&
-                    bar.low !== null &&
-                    bar.close !== null
-
-                )
-                .sort(
-                    (a, b) =>
-                        a.timestamp -
-                        b.timestamp
-                );
+                })
+                .reverse();
 
 
         return res.status(200).json({
 
             symbol,
 
-            timeframe:
-                requestedTimeframe,
+            timeframe,
 
             bars,
 
@@ -383,8 +284,7 @@ export default async function handler(req, res) {
                 "iex",
 
             generatedAt:
-                new Date()
-                    .toISOString()
+                new Date().toISOString()
 
         });
 
@@ -399,7 +299,7 @@ export default async function handler(req, res) {
 
         return res.status(500).json({
             error:
-                "Unable to retrieve historical market data."
+                "Unable to retrieve candle data."
         });
 
     }
@@ -422,6 +322,92 @@ function normalizeSymbol(symbol) {
             /[^A-Z0-9.\-]/g,
             ""
         );
+
+}
+
+
+function normalizeTimeframe(value) {
+
+    const timeframe =
+        String(
+            value || "1m"
+        )
+            .trim()
+            .toLowerCase();
+
+
+    const supported =
+        [
+            "1m",
+            "5m",
+            "15m",
+            "1h",
+            "1d"
+        ];
+
+
+    return supported.includes(
+        timeframe
+    )
+        ? timeframe
+        : null;
+
+}
+
+
+function toAlpacaTimeframe(timeframe) {
+
+    const map = {
+
+        "1m": "1Min",
+
+        "5m": "5Min",
+
+        "15m": "15Min",
+
+        "1h": "1Hour",
+
+        "1d": "1Day"
+
+    };
+
+
+    return map[
+        timeframe
+    ];
+
+}
+
+
+function lookbackMilliseconds(timeframe) {
+
+    const day =
+        24 * 60 * 60 * 1000;
+
+
+    const map = {
+
+        "1m":
+            7 * day,
+
+        "5m":
+            14 * day,
+
+        "15m":
+            30 * day,
+
+        "1h":
+            90 * day,
+
+        "1d":
+            500 * day
+
+    };
+
+
+    return map[
+        timeframe
+    ] || 14 * day;
 
 }
 
