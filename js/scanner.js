@@ -4,6 +4,13 @@
    Data source:
    StockScanner.marketService.getMovers()
 
+   Responsibilities:
+   - Receive cleaned live mover data
+   - Apply USER scanner preferences
+   - Rank usable candidates
+   - Render scanner results
+   - Refresh live data periodically
+
    NO DEMO DATA.
    ========================================================= */
 
@@ -17,26 +24,43 @@ StockScanner.scanner = {
 
     filteredStocks: [],
 
+    refreshTimer: null,
+
+    refreshing: false,
+
+
+    /* =====================================================
+       DEFAULT USER SCAN
+
+       These are preferences — not API validity rules.
+
+       They can be changed from Scan Settings.
+    ===================================================== */
 
     settings: {
 
         minimumPrice:
-            null,
+            1,
 
         maximumPrice:
             null,
 
         minimumVolume:
-            null,
+            100000,
+
+        /*
+         RVOL remains disabled until we have legitimate
+         historical average-volume calculations.
+        */
 
         minimumRelativeVolume:
             null,
 
         minimumMove:
-            null,
+            2,
 
         maximumSpread:
-            null
+            10
 
     },
 
@@ -49,9 +73,66 @@ StockScanner.scanner = {
 
         this.bindSettings();
 
+        this.populateSettingsInputs();
+
         this.updateSummary();
 
         await this.refresh();
+
+
+        /*
+         Keep the scanner alive.
+
+         Thirty seconds is frequent enough for this
+         Alpaca mover-based discovery layer without
+         hammering the API.
+        */
+
+        this.startAutoRefresh();
+
+    },
+
+
+    /* =====================================================
+       AUTO REFRESH
+    ===================================================== */
+
+    startAutoRefresh() {
+
+        if (
+            this.refreshTimer
+        ) {
+
+            clearInterval(
+                this.refreshTimer
+            );
+
+        }
+
+
+        this.refreshTimer =
+            setInterval(
+                () => {
+
+                    /*
+                     Don't burn requests while the browser
+                     tab is hidden.
+                    */
+
+                    if (
+                        document.hidden
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    this.refresh();
+
+                },
+                30000
+            );
 
     },
 
@@ -62,12 +143,43 @@ StockScanner.scanner = {
 
     async refresh() {
 
-        this.setStatus(
-            "LOADING"
-        );
+        /*
+         Prevent overlapping scanner requests.
+        */
+
+        if (
+            this.refreshing
+        ) {
+
+            return;
+
+        }
 
 
-        this.renderLoading();
+        this.refreshing =
+            true;
+
+
+        /*
+         Keep existing rows visible during automatic
+         refreshes.
+
+         Only show the loading row when we have no
+         scanner data yet.
+        */
+
+        if (
+            !this.stocks.length
+        ) {
+
+            this.setStatus(
+                "LOADING"
+            );
+
+
+            this.renderLoading();
+
+        }
 
 
         try {
@@ -77,7 +189,7 @@ StockScanner.scanner = {
                     .marketService
                     .getMovers({
 
-                        top: 25
+                        top: 40
 
                     });
 
@@ -104,22 +216,41 @@ StockScanner.scanner = {
             );
 
 
-            this.stocks = [];
+            /*
+             If we already have valid scanner data,
+             don't erase the entire screen because one
+             refresh failed.
 
-            this.filteredStocks = [];
-
+             Mark the scanner error but preserve the
+             previous results.
+            */
 
             this.setStatus(
                 "ERROR"
             );
 
 
-            this.renderError(
+            if (
+                !this.stocks.length
+            ) {
 
-                error?.message ||
-                "Live scanner unavailable."
+                this.filteredStocks = [];
 
-            );
+
+                this.renderError(
+
+                    error?.message ||
+                    "Live scanner unavailable."
+
+                );
+
+            }
+
+        }
+        finally {
+
+            this.refreshing =
+                false;
 
         }
 
@@ -140,22 +271,56 @@ StockScanner.scanner = {
             [...this.stocks];
 
 
+        /*
+         DATA QUALITY
+
+         movers.js already removes truly stale data.
+
+         CHECK rows are retained because an unusual
+         market move is not automatically invalid.
+
+         We rank CHECK below clean data later.
+        */
+
+        results =
+            results.filter(
+                stock => {
+
+                    return (
+                        stock &&
+                        stock.symbol &&
+                        this.numberOrNull(
+                            stock.price
+                        ) !== null
+                    );
+
+                }
+            );
+
+
+        /* ---------------- PRICE ---------------- */
+
         if (
             settings.minimumPrice !== null
         ) {
 
             results =
                 results.filter(
-                    stock =>
+                    stock => {
 
-                        this.numberOrNull(
-                            stock.price
-                        ) !== null &&
+                        const price =
+                            this.numberOrNull(
+                                stock.price
+                            );
 
-                        Number(
-                            stock.price
-                        ) >=
-                        settings.minimumPrice
+
+                        return (
+                            price !== null &&
+                            price >=
+                            settings.minimumPrice
+                        );
+
+                    }
                 );
 
         }
@@ -167,20 +332,27 @@ StockScanner.scanner = {
 
             results =
                 results.filter(
-                    stock =>
+                    stock => {
 
-                        this.numberOrNull(
-                            stock.price
-                        ) !== null &&
+                        const price =
+                            this.numberOrNull(
+                                stock.price
+                            );
 
-                        Number(
-                            stock.price
-                        ) <=
-                        settings.maximumPrice
+
+                        return (
+                            price !== null &&
+                            price <=
+                            settings.maximumPrice
+                        );
+
+                    }
                 );
 
         }
 
+
+        /* ---------------- VOLUME ---------------- */
 
         if (
             settings.minimumVolume !== null
@@ -188,26 +360,33 @@ StockScanner.scanner = {
 
             results =
                 results.filter(
-                    stock =>
+                    stock => {
 
-                        this.numberOrNull(
-                            stock.volume
-                        ) !== null &&
+                        const volume =
+                            this.numberOrNull(
+                                stock.volume
+                            );
 
-                        Number(
-                            stock.volume
-                        ) >=
-                        settings.minimumVolume
+
+                        return (
+                            volume !== null &&
+                            volume >=
+                            settings.minimumVolume
+                        );
+
+                    }
                 );
 
         }
 
 
-        /*
-         RVOL is not yet calculated.
+        /* ---------------- RVOL ----------------
 
-         If the user activates an RVOL filter, stocks
-         without actual RVOL data correctly fail it.
+           We do NOT fake relative volume.
+
+           If the user manually activates this filter
+           before RVOL history is implemented, symbols
+           without a real RVOL value correctly fail.
         */
 
         if (
@@ -237,6 +416,8 @@ StockScanner.scanner = {
         }
 
 
+        /* ---------------- DAILY MOVE ---------------- */
+
         if (
             settings.minimumMove !== null
         ) {
@@ -263,10 +444,7 @@ StockScanner.scanner = {
         }
 
 
-        /*
-         This setting existed previously but was not
-         actually being applied.
-        */
+        /* ---------------- SPREAD ---------------- */
 
         if (
             settings.maximumSpread !== null
@@ -282,6 +460,12 @@ StockScanner.scanner = {
                             );
 
 
+                        /*
+                         If we requested a spread limit,
+                         a symbol with no valid bid/ask
+                         cannot prove that it passes.
+                        */
+
                         return (
                             spread !== null &&
                             spread <=
@@ -292,6 +476,105 @@ StockScanner.scanner = {
                 );
 
         }
+
+
+        /* =================================================
+           RANKING
+
+           1. Clean data before CHECK data
+           2. LIVE before LAST SESSION / UNKNOWN
+           3. Larger percentage move
+           4. Higher volume as tie breaker
+        ================================================= */
+
+        results.sort(
+            (a, b) => {
+
+                const qualityDifference =
+                    this.qualityRank(
+                        a.dataQuality
+                    ) -
+                    this.qualityRank(
+                        b.dataQuality
+                    );
+
+
+                if (
+                    qualityDifference !== 0
+                ) {
+
+                    return qualityDifference;
+
+                }
+
+
+                const freshnessDifference =
+                    this.freshnessRank(
+                        a.freshness ||
+                        a.setupStatus
+                    ) -
+                    this.freshnessRank(
+                        b.freshness ||
+                        b.setupStatus
+                    );
+
+
+                if (
+                    freshnessDifference !== 0
+                ) {
+
+                    return freshnessDifference;
+
+                }
+
+
+                const moveA =
+                    Math.abs(
+                        this.numberOrNull(
+                            a.changePercent
+                        ) || 0
+                    );
+
+
+                const moveB =
+                    Math.abs(
+                        this.numberOrNull(
+                            b.changePercent
+                        ) || 0
+                    );
+
+
+                if (
+                    moveA !== moveB
+                ) {
+
+                    return (
+                        moveB -
+                        moveA
+                    );
+
+                }
+
+
+                const volumeA =
+                    this.numberOrNull(
+                        a.volume
+                    ) || 0;
+
+
+                const volumeB =
+                    this.numberOrNull(
+                        b.volume
+                    ) || 0;
+
+
+                return (
+                    volumeB -
+                    volumeA
+                );
+
+            }
+        );
 
 
         this.filteredStocks =
@@ -375,19 +658,60 @@ StockScanner.scanner = {
                     );
 
 
+                const quality =
+                    String(
+                        stock.dataQuality ||
+                        "OK"
+                    ).toUpperCase();
+
+
+                const freshness =
+                    String(
+                        stock.freshness ||
+                        stock.setupStatus ||
+                        "UNKNOWN"
+                    ).toUpperCase();
+
+
+                /*
+                 Keep STATUS meaningful.
+
+                 Examples:
+                 LIVE
+                 LAST SESSION
+                 LIVE · CHECK
+                */
+
+                let status =
+                    freshness;
+
+
+                if (
+                    quality === "CHECK"
+                ) {
+
+                    status +=
+                        " · CHECK";
+
+                }
+
+
                 row.innerHTML = `
 
                     <td>
                         <strong>
-                            ${this.escapeHTML(stock.symbol)}
+                            ${this.escapeHTML(
+                                stock.symbol
+                            )}
                         </strong>
                     </td>
 
                     <td>
                         ${
                             price !== null
-                                ? "$" +
-                                  price.toFixed(2)
+                                ? this.formatPrice(
+                                    price
+                                  )
                                 : "---"
                         }
                     </td>
@@ -451,11 +775,14 @@ StockScanner.scanner = {
 
                     </td>
 
-                    <td>
+                    <td class="${
+                        quality === "CHECK"
+                            ? "warning"
+                            : ""
+                    }">
 
                         ${this.escapeHTML(
-                            stock.setupStatus ||
-                            "LIVE"
+                            status
                         )}
 
                     </td>
@@ -467,7 +794,11 @@ StockScanner.scanner = {
                     () => {
 
                         if (
-                            StockScanner.ticker
+                            StockScanner.ticker &&
+                            typeof StockScanner
+                                .ticker
+                                .select ===
+                                "function"
                         ) {
 
                             StockScanner.ticker
@@ -569,7 +900,7 @@ StockScanner.scanner = {
 
         button.addEventListener(
             "click",
-            () => {
+            async () => {
 
                 this.readSettings();
 
@@ -588,8 +919,85 @@ StockScanner.scanner = {
 
                 }
 
+
+                /*
+                 Immediately get a fresh mover snapshot
+                 after changing scanner preferences.
+                */
+
+                await this.refresh();
+
             }
         );
+
+    },
+
+
+    /*
+     Put our defaults into the actual drawer inputs so
+     the UI and scanner state cannot disagree.
+    */
+
+    populateSettingsInputs() {
+
+        this.writeInput(
+            "minimumPrice",
+            this.settings.minimumPrice
+        );
+
+
+        this.writeInput(
+            "maximumPrice",
+            this.settings.maximumPrice
+        );
+
+
+        this.writeInput(
+            "minimumVolume",
+            this.settings.minimumVolume
+        );
+
+
+        this.writeInput(
+            "minimumRelativeVolume",
+            this.settings.minimumRelativeVolume
+        );
+
+
+        this.writeInput(
+            "minimumMove",
+            this.settings.minimumMove
+        );
+
+
+        this.writeInput(
+            "maximumSpread",
+            this.settings.maximumSpread
+        );
+
+    },
+
+
+    writeInput(
+        id,
+        value
+    ) {
+
+        const element =
+            document.getElementById(
+                id
+            );
+
+
+        if (!element) {
+            return;
+        }
+
+
+        element.value =
+            value === null
+                ? ""
+                : String(value);
 
     },
 
@@ -651,7 +1059,9 @@ StockScanner.scanner = {
 
 
         const value =
-            element.value;
+            String(
+                element.value || ""
+            ).trim();
 
 
         if (
@@ -702,22 +1112,41 @@ StockScanner.scanner = {
 
             <span>
                 RelVol:
-                ${s.minimumRelativeVolume ?? "ANY"}
+                ${
+                    s.minimumRelativeVolume ??
+                    "OFF"
+                }
             </span>
 
             <span>
                 Volume:
-                ${s.minimumVolume ?? "ANY"}
+                ${
+                    s.minimumVolume !== null
+                        ? this.formatVolume(
+                            s.minimumVolume
+                          )
+                        : "ANY"
+                }
             </span>
 
             <span>
                 Move:
-                ${s.minimumMove ?? "ANY"}%
+                ${
+                    s.minimumMove !== null
+                        ? s.minimumMove + "%"
+                        : "ANY"
+                }
             </span>
 
             <span>
                 Spread:
-                ${s.maximumSpread ?? "ANY"}%
+                ${
+                    s.maximumSpread !== null
+                        ? "≤ " +
+                          s.maximumSpread +
+                          "%"
+                        : "ANY"
+                }
             </span>
 
             <span>
@@ -786,29 +1215,118 @@ StockScanner.scanner = {
 
 
     /* =====================================================
-       HELPERS
+       RANK HELPERS
     ===================================================== */
 
-    numberOrNull(value) {
+    qualityRank(
+        quality
+    ) {
+
+        const value =
+            String(
+                quality ||
+                "OK"
+            ).toUpperCase();
+
 
         if (
-            value === undefined ||
-            value === null ||
-            value === ""
+            value === "OK"
         ) {
 
-            return null;
+            return 0;
 
         }
 
 
+        if (
+            value === "CHECK"
+        ) {
+
+            return 1;
+
+        }
+
+
+        return 2;
+
+    },
+
+
+    freshnessRank(
+        freshness
+    ) {
+
+        const value =
+            String(
+                freshness ||
+                ""
+            ).toUpperCase();
+
+
+        if (
+            value === "LIVE"
+        ) {
+
+            return 0;
+
+        }
+
+
+        if (
+            value === "LAST SESSION"
+        ) {
+
+            return 1;
+
+        }
+
+
+        return 2;
+
+    },
+
+
+    /* =====================================================
+       FORMATTERS
+    ===================================================== */
+
+    formatPrice(price) {
+
         const number =
-            Number(value);
+            this.numberOrNull(
+                price
+            );
 
 
-        return Number.isFinite(number)
-            ? number
-            : null;
+        if (
+            number === null
+        ) {
+
+            return "---";
+
+        }
+
+
+        /*
+         Preserve precision for low-priced stocks.
+        */
+
+        if (
+            number < 1
+        ) {
+
+            return (
+                "$" +
+                number.toFixed(4)
+            );
+
+        }
+
+
+        return (
+            "$" +
+            number.toFixed(2)
+        );
 
     },
 
@@ -866,6 +1384,30 @@ StockScanner.scanner = {
         return Math.round(
             number
         ).toLocaleString();
+
+    },
+
+
+    numberOrNull(value) {
+
+        if (
+            value === undefined ||
+            value === null ||
+            value === ""
+        ) {
+
+            return null;
+
+        }
+
+
+        const number =
+            Number(value);
+
+
+        return Number.isFinite(number)
+            ? number
+            : null;
 
     },
 
