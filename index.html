@@ -2,12 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Stock Scanner</title>
 
-  <link rel="stylesheet" href="css/dashboard.css">
+  <link
+    rel="stylesheet"
+    href="css/dashboard.css"
+  >
 </head>
 
 <body>
@@ -25,14 +31,35 @@
       <span>STOCK SCANNER</span>
     </div>
 
-    <div id="systemStatus" class="system-status">
-      <span>MARKET <b class="status-off">OFFLINE</b></span>
-      <span>NEWS <b class="status-off">OFFLINE</b></span>
-      <span>SCANNER <b class="status-ready">READY</b></span>
-      <span>AI <b class="status-ready">READY</b></span>
+    <div
+      id="systemStatus"
+      class="system-status"
+    >
+      <span>
+        MARKET
+        <b class="status-off">OFFLINE</b>
+      </span>
+
+      <span>
+        NEWS
+        <b class="status-off">OFFLINE</b>
+      </span>
+
+      <span>
+        SCANNER
+        <b class="status-ready">READY</b>
+      </span>
+
+      <span>
+        AI
+        <b class="status-off">PENDING</b>
+      </span>
     </div>
 
-    <div id="marketClock" class="market-clock">
+    <div
+      id="marketClock"
+      class="market-clock"
+    >
       --:--:--
     </div>
 
@@ -64,13 +91,15 @@
       <button
         id="tickerSearchButton"
         type="button"
-        class="ticker-search-button">
+        class="ticker-search-button"
+      >
         SEARCH
       </button>
 
       <div
         id="tickerSearchResults"
-        class="ticker-search-results hidden">
+        class="ticker-search-results hidden"
+      >
       </div>
 
     </div>
@@ -82,9 +111,14 @@
        MARKET PULSE
   ======================================================= -->
 
-  <section id="marketPulse" class="market-pulse">
+  <section
+    id="marketPulse"
+    class="market-pulse"
+  >
 
-    <div class="pulse-label">MARKET PULSE</div>
+    <div class="pulse-label">
+      MARKET PULSE
+    </div>
 
     <div class="pulse-item">
       <span>SPY</span>
@@ -125,34 +159,52 @@
 
   <nav class="watchlist-nav">
 
-    <button id="watchlistPrev"
-            class="nav-arrow"
-            aria-label="Previous watchlist">
+    <button
+      id="watchlistPrev"
+      class="nav-arrow"
+      type="button"
+      aria-label="Previous watchlist"
+    >
       ◀
     </button>
 
-    <div id="watchlistTabs" class="watchlist-tabs">
+    <div
+      id="watchlistTabs"
+      class="watchlist-tabs"
+    >
 
-      <button class="watchlist-tab active"
-              data-watchlist="main">
+      <button
+        class="watchlist-tab active"
+        type="button"
+        data-watchlist="main"
+      >
         MAIN WATCHLIST
       </button>
 
-      <button class="watchlist-tab"
-              data-watchlist="momentum">
+      <button
+        class="watchlist-tab"
+        type="button"
+        data-watchlist="momentum"
+      >
         MOMENTUM
       </button>
 
-      <button class="watchlist-tab"
-              data-watchlist="swing">
+      <button
+        class="watchlist-tab"
+        type="button"
+        data-watchlist="swing"
+      >
         SWING
       </button>
 
     </div>
 
-    <button id="watchlistNext"
-            class="nav-arrow"
-            aria-label="Next watchlist">
+    <button
+      id="watchlistNext"
+      class="nav-arrow"
+      type="button"
+      aria-label="Next watchlist"
+    >
       ▶
     </button>
 
@@ -176,21 +228,46 @@
       <div class="panel-header">
 
         <div>
-          <h2>LIVE MARKET INTELLIGENCE</h2>
+
+          <h2>
+            LIVE MARKET INTELLIGENCE
+          </h2>
+
           <small>
             Stocks • Business • Markets • Catalysts
           </small>
+
         </div>
 
         <div class="header-controls">
 
-          <select id="newsFilter">
-            <option value="all">All News</option>
-            <option value="market">Market</option>
-            <option value="stocks">Stocks</option>
-            <option value="business">Business</option>
-            <option value="earnings">Earnings</option>
-            <option value="sec">SEC</option>
+          <select
+            id="newsFilter"
+            aria-label="Filter market news"
+          >
+            <option value="all">
+              All News
+            </option>
+
+            <option value="market">
+              Market
+            </option>
+
+            <option value="stocks">
+              Stocks
+            </option>
+
+            <option value="business">
+              Business
+            </option>
+
+            <option value="earnings">
+              Earnings
+            </option>
+
+            <option value="sec">
+              SEC
+            </option>
           </select>
 
         </div>
@@ -198,20 +275,28 @@
       </div>
 
 
-      <div id="newsFeed" class="news-feed">
+      <div
+        id="newsFeed"
+        class="news-feed"
+      >
 
         <article class="news-item placeholder">
 
           <div class="news-meta">
-            <span>DEMO</span>
+
+            <span>LIVE</span>
+
             <time>--:--</time>
+
           </div>
 
-          <h3>Live news feed will appear here.</h3>
+          <h3>
+            Waiting for market intelligence...
+          </h3>
 
           <p>
-            Market, company, business and catalyst
-            feeds will populate this panel.
+            Live market, company and catalyst
+            stories will populate this panel.
           </p>
 
         </article>
@@ -219,7 +304,6 @@
       </div>
 
     </section>
-
 
 
     <!-- ====================================================
@@ -232,24 +316,38 @@
       <div class="panel-header">
 
         <div>
-          <h2>MARKET SCANNER</h2>
-          <small>Live opportunity discovery</small>
+
+          <h2>
+            MARKET SCANNER
+          </h2>
+
+          <small>
+            Live opportunity discovery
+          </small>
+
         </div>
 
-        <button id="scanSettingsButton"
-                class="primary-button">
+        <button
+          id="scanSettingsButton"
+          type="button"
+          class="primary-button"
+        >
           ⚙ SCAN SETTINGS
         </button>
 
       </div>
 
 
-      <div id="activeScanSummary"
-           class="scan-summary">
+      <div
+        id="activeScanSummary"
+        class="scan-summary"
+      >
 
         <span>Price: ANY</span>
         <span>RelVol: ANY</span>
         <span>Volume: ANY</span>
+        <span>Move: ANY</span>
+        <span>Spread: ANY</span>
         <span>Setup: ALL</span>
 
       </div>
@@ -261,26 +359,28 @@
 
           <thead>
 
-          <tr>
-            <th>TICKER</th>
-            <th>PRICE</th>
-            <th>%</th>
-            <th>RVOL</th>
-            <th>VOLUME</th>
-            <th>SETUP</th>
-            <th>CATALYST</th>
-            <th>STATUS</th>
-          </tr>
+            <tr>
+              <th>TICKER</th>
+              <th>PRICE</th>
+              <th>%</th>
+              <th>RVOL</th>
+              <th>VOLUME</th>
+              <th>SETUP</th>
+              <th>CATALYST</th>
+              <th>STATUS</th>
+            </tr>
 
           </thead>
 
           <tbody id="scannerResults">
 
-          <tr class="empty-row">
-            <td colspan="8">
-              Scanner waiting for market data...
-            </td>
-          </tr>
+            <tr class="empty-row">
+
+              <td colspan="8">
+                Scanner waiting for live market data...
+              </td>
+
+            </tr>
 
           </tbody>
 
@@ -289,7 +389,6 @@
       </div>
 
     </section>
-
 
 
     <!-- ====================================================
@@ -302,25 +401,40 @@
       <div class="panel-header">
 
         <div>
-          <h2>SELECTED STOCK</h2>
-          <small>Live analysis workspace</small>
+
+          <h2>
+            SELECTED STOCK
+          </h2>
+
+          <small>
+            Live analysis workspace
+          </small>
+
         </div>
 
       </div>
 
 
-      <div id="selectedTicker"
-           class="ticker-identity">
+      <!-- Ticker identity -->
+
+      <div
+        id="selectedTicker"
+        class="ticker-identity"
+      >
 
         <div>
 
-          <span id="tickerSymbol"
-                class="ticker-symbol">
+          <span
+            id="tickerSymbol"
+            class="ticker-symbol"
+          >
             ---
           </span>
 
-          <span id="tickerCompany"
-                class="ticker-company">
+          <span
+            id="tickerCompany"
+            class="ticker-company"
+          >
             Select a stock
           </span>
 
@@ -328,14 +442,18 @@
 
         <div>
 
-          <span id="tickerPrice"
-                class="ticker-price">
-            $---
+          <span
+            id="tickerPrice"
+            class="ticker-price"
+          >
+            ---
           </span>
 
-          <span id="tickerChange"
-                class="ticker-change">
-            --%
+          <span
+            id="tickerChange"
+            class="ticker-change"
+          >
+            ---
           </span>
 
         </div>
@@ -347,73 +465,180 @@
 
       <div class="watchlist-actions">
 
-        <button id="addWatchlistButton"
-                class="success-button"
-                disabled>
+        <button
+          id="addWatchlistButton"
+          type="button"
+          class="success-button"
+          disabled
+        >
           + ADD TO WATCHLIST
         </button>
 
-        <button id="removeWatchlistButton"
-                class="danger-button"
-                disabled>
+        <button
+          id="removeWatchlistButton"
+          type="button"
+          class="danger-button"
+          disabled
+        >
           − REMOVE
         </button>
 
       </div>
 
 
-      <!-- Chart placeholder -->
+      <!-- ==================================================
+           LIVE CANDLESTICK CHART
+      =================================================== -->
 
-      <div id="chartArea"
-           class="chart-placeholder">
+      <div
+        id="chartArea"
+        class="live-chart"
+      >
 
-        <span>LIVE CHART</span>
+        <div class="chart-toolbar">
 
-        <small>
-          Select a ticker to load chart
-        </small>
+          <div
+            id="chartStatus"
+            class="chart-status"
+          >
+            LIVE CHART
+          </div>
+
+
+          <div class="chart-timeframes">
+
+            <button
+              type="button"
+              data-chart-timeframe="1m"
+            >
+              1m
+            </button>
+
+            <button
+              type="button"
+              data-chart-timeframe="5m"
+              class="active"
+            >
+              5m
+            </button>
+
+            <button
+              type="button"
+              data-chart-timeframe="15m"
+            >
+              15m
+            </button>
+
+            <button
+              type="button"
+              data-chart-timeframe="1h"
+            >
+              1h
+            </button>
+
+            <button
+              type="button"
+              data-chart-timeframe="1d"
+            >
+              1D
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div
+          id="chartCanvas"
+          class="chart-canvas"
+        >
+
+          <div class="chart-message">
+            Select a ticker to load chart
+          </div>
+
+        </div>
 
       </div>
 
 
-      <!-- Analysis metrics -->
+      <!-- ==================================================
+           ANALYSIS METRICS
+      =================================================== -->
 
       <div class="analysis-grid">
 
         <div class="metric">
+
           <span>PRICE</span>
-          <strong id="metricPrice">---</strong>
+
+          <strong id="metricPrice">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="metric">
+
           <span>VOLUME</span>
-          <strong id="metricVolume">---</strong>
+
+          <strong id="metricVolume">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="metric">
+
           <span>REL VOL</span>
-          <strong id="metricRelVolume">---</strong>
+
+          <strong id="metricRelVolume">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="metric">
+
           <span>VWAP</span>
-          <strong id="metricVWAP">---</strong>
+
+          <strong id="metricVWAP">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="metric">
+
           <span>MOMENTUM</span>
-          <strong id="metricMomentum">---</strong>
+
+          <strong id="metricMomentum">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="metric">
+
           <span>VOLATILITY</span>
-          <strong id="metricVolatility">---</strong>
+
+          <strong id="metricVolatility">
+            ---
+          </strong>
+
         </div>
 
       </div>
 
 
-      <!-- Detected setup -->
+      <!-- ==================================================
+           DETECTED SETUP
+      =================================================== -->
 
       <section class="setup-card">
 
@@ -421,20 +646,26 @@
           DETECTED SETUP
         </div>
 
-        <div id="detectedSetup"
-             class="setup-name">
+        <div
+          id="detectedSetup"
+          class="setup-name"
+        >
           None
         </div>
 
-        <div id="setupStatus"
-             class="setup-status">
+        <div
+          id="setupStatus"
+          class="setup-status"
+        >
           Waiting for ticker
         </div>
 
       </section>
 
 
-      <!-- WHY NOW -->
+      <!-- ==================================================
+           WHY NOW
+      =================================================== -->
 
       <section class="why-now">
 
@@ -444,15 +675,19 @@
 
         <div id="whyNowContent">
 
-          Select a scanner result to see why
-          the stock triggered.
+          <p>
+            Select a scanner result to see why
+            the stock triggered.
+          </p>
 
         </div>
 
       </section>
 
 
-      <!-- Trade planner -->
+      <!-- ==================================================
+           TRADE PLANNER
+      =================================================== -->
 
       <section class="trade-plan">
 
@@ -460,29 +695,59 @@
           TRADE PLAN
         </div>
 
+
         <div class="trade-row">
+
           <span>ENTRY</span>
-          <strong id="tradeEntry">---</strong>
+
+          <strong id="tradeEntry">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="trade-row">
+
           <span>INVALIDATION / STOP</span>
-          <strong id="tradeStop">---</strong>
+
+          <strong id="tradeStop">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="trade-row">
+
           <span>TARGET 1</span>
-          <strong id="tradeTarget1">---</strong>
+
+          <strong id="tradeTarget1">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="trade-row">
+
           <span>TARGET 2</span>
-          <strong id="tradeTarget2">---</strong>
+
+          <strong id="tradeTarget2">
+            ---
+          </strong>
+
         </div>
 
+
         <div class="trade-row">
+
           <span>RISK / REWARD</span>
-          <strong id="riskReward">---</strong>
+
+          <strong id="riskReward">
+            ---
+          </strong>
+
         </div>
 
       </section>
@@ -492,11 +757,17 @@
 
       <div class="tool-buttons">
 
-        <button id="patternsButton">
+        <button
+          id="patternsButton"
+          type="button"
+        >
           PATTERNS
         </button>
 
-        <button id="toolsButton">
+        <button
+          id="toolsButton"
+          type="button"
+        >
           TOOLS
         </button>
 
@@ -516,6 +787,7 @@
     <div class="panel-header">
 
       <div>
+
         <h2 id="activeWatchlistTitle">
           MAIN WATCHLIST
         </h2>
@@ -523,6 +795,7 @@
         <small>
           Watching → Developing → Triggered → In Trade
         </small>
+
       </div>
 
       <span id="watchlistCount">
@@ -538,25 +811,27 @@
 
         <thead>
 
-        <tr>
-          <th>TICKER</th>
-          <th>PRICE</th>
-          <th>%</th>
-          <th>SETUP</th>
-          <th>STATUS</th>
-          <th>CATALYST</th>
-          <th></th>
-        </tr>
+          <tr>
+            <th>TICKER</th>
+            <th>PRICE</th>
+            <th>%</th>
+            <th>SETUP</th>
+            <th>STATUS</th>
+            <th>CATALYST</th>
+            <th></th>
+          </tr>
 
         </thead>
 
         <tbody id="watchlistBody">
 
-        <tr class="empty-row">
-          <td colspan="7">
-            No stocks in this watchlist.
-          </td>
-        </tr>
+          <tr class="empty-row">
+
+            <td colspan="7">
+              No stocks in this watchlist.
+            </td>
+
+          </tr>
 
         </tbody>
 
@@ -571,15 +846,23 @@
        SCAN SETTINGS DRAWER
   ======================================================= -->
 
-  <div id="scanSettingsDrawer"
-       class="drawer hidden">
+  <div
+    id="scanSettingsDrawer"
+    class="drawer hidden"
+  >
 
     <div class="drawer-header">
 
-      <h2>SCAN SETTINGS</h2>
+      <h2>
+        SCAN SETTINGS
+      </h2>
 
-      <button class="drawer-close"
-              data-close-drawer>
+      <button
+        type="button"
+        class="drawer-close"
+        data-close-drawer
+        aria-label="Close scan settings"
+      >
         ✕
       </button>
 
@@ -589,69 +872,128 @@
     <div class="drawer-content">
 
       <label>
+
         Minimum Price
-        <input id="minimumPrice"
-               type="number"
-               step="0.01">
+
+        <input
+          id="minimumPrice"
+          type="number"
+          step="0.01"
+          min="0"
+        >
+
       </label>
 
+
       <label>
+
         Maximum Price
-        <input id="maximumPrice"
-               type="number"
-               step="0.01">
+
+        <input
+          id="maximumPrice"
+          type="number"
+          step="0.01"
+          min="0"
+        >
+
       </label>
 
+
       <label>
+
         Minimum Volume
-        <input id="minimumVolume"
-               type="number">
+
+        <input
+          id="minimumVolume"
+          type="number"
+          step="1"
+          min="0"
+        >
+
       </label>
 
+
       <label>
+
         Minimum Relative Volume
-        <input id="minimumRelativeVolume"
-               type="number"
-               step="0.1">
+
+        <input
+          id="minimumRelativeVolume"
+          type="number"
+          step="0.1"
+          min="0"
+        >
+
       </label>
 
+
       <label>
+
         Minimum % Move
-        <input id="minimumMove"
-               type="number"
-               step="0.1">
+
+        <input
+          id="minimumMove"
+          type="number"
+          step="0.1"
+          min="0"
+        >
+
       </label>
+
 
       <label>
+
         Maximum Spread %
-        <input id="maximumSpread"
-               type="number"
-               step="0.1">
+
+        <input
+          id="maximumSpread"
+          type="number"
+          step="0.1"
+          min="0"
+        >
+
       </label>
 
 
       <fieldset>
 
-        <legend>Trading Session</legend>
+        <legend>
+          Trading Session
+        </legend>
 
         <label>
-          <input type="checkbox"
-                 value="premarket"
-                 checked>
+
+          <input
+            type="checkbox"
+            value="premarket"
+            checked
+          >
+
           Premarket
+
         </label>
 
         <label>
-          <input type="checkbox"
-                 value="regular"
-                 checked>
+
+          <input
+            type="checkbox"
+            value="regular"
+            checked
+          >
+
           Regular
+
         </label>
 
         <label>
-          <input type="checkbox"
-                 value="afterhours">
+
+          <input
+            type="checkbox"
+            value="afterhours"
+          >
+
           After Hours
+
         </label>
 
       </fieldset>
@@ -659,20 +1001,30 @@
 
       <fieldset>
 
-        <legend>Setup Detection</legend>
+        <legend>
+          Setup Detection
+        </legend>
 
         <label>
-          <input type="checkbox"
-                 value="all"
-                 checked>
+
+          <input
+            type="checkbox"
+            value="all"
+            checked
+          >
+
           Scan All Setups
+
         </label>
 
       </fieldset>
 
 
-      <button id="applyScanSettings"
-              class="primary-button full-width">
+      <button
+        id="applyScanSettings"
+        type="button"
+        class="primary-button full-width"
+      >
         APPLY SETTINGS
       </button>
 
@@ -685,25 +1037,33 @@
        PATTERN DRAWER
   ======================================================= -->
 
-  <div id="patternsDrawer"
-       class="drawer hidden">
+  <div
+    id="patternsDrawer"
+    class="drawer hidden"
+  >
 
     <div class="drawer-header">
 
-      <h2>PATTERN LIBRARY</h2>
+      <h2>
+        PATTERN LIBRARY
+      </h2>
 
-      <button class="drawer-close"
-              data-close-drawer>
+      <button
+        type="button"
+        class="drawer-close"
+        data-close-drawer
+        aria-label="Close pattern library"
+      >
         ✕
       </button>
 
     </div>
 
-    <div id="patternLibrary"
-         class="drawer-content">
-
+    <div
+      id="patternLibrary"
+      class="drawer-content"
+    >
       Pattern library will load here.
-
     </div>
 
   </div>
@@ -713,15 +1073,23 @@
        TOOLS DRAWER
   ======================================================= -->
 
-  <div id="toolsDrawer"
-       class="drawer hidden">
+  <div
+    id="toolsDrawer"
+    class="drawer hidden"
+  >
 
     <div class="drawer-header">
 
-      <h2>TOOLS</h2>
+      <h2>
+        TOOLS
+      </h2>
 
-      <button class="drawer-close"
-              data-close-drawer>
+      <button
+        type="button"
+        class="drawer-close"
+        data-close-drawer
+        aria-label="Close tools"
+      >
         ✕
       </button>
 
@@ -729,54 +1097,70 @@
 
     <div class="drawer-content">
 
-      <button>Economic Calendar</button>
-      <button>Risk Calculator</button>
-      <button>Alerts</button>
-      <button>Notes</button>
-      <button>Indicators</button>
+      <button type="button">
+        Economic Calendar
+      </button>
+
+      <button type="button">
+        Risk Calculator
+      </button>
+
+      <button type="button">
+        Alerts
+      </button>
+
+      <button type="button">
+        Notes
+      </button>
+
+      <button type="button">
+        Indicators
+      </button>
 
     </div>
 
   </div>
 
 
-  <!-- Drawer backdrop -->
+  <!-- ======================================================
+       DRAWER BACKDROP
+  ======================================================= -->
 
-  <div id="drawerBackdrop"
-       class="drawer-backdrop hidden">
+  <div
+    id="drawerBackdrop"
+    class="drawer-backdrop hidden"
+  >
   </div>
 
 </div>
 
 
 <!-- ========================================================
-     MODULES
+     MODULE LOAD ORDER
 
-     Load order matters:
-     1. Demo/fallback data
-     2. Market service abstraction
-     3. Feature modules
-     4. Search module
-     5. Main application controller
+     market-service must exist before modules that use it.
+
+     chart.js must exist before ticker.js because ticker.js
+     sends ticker selections to the chart module.
+
+     app.js loads last.
 ========================================================= -->
 
 <script src="data/demo-data.js"></script>
 
-<!-- Provider-independent market/news data service -->
 <script src="services/market-service.js"></script>
 
-<!-- Feature modules -->
 <script src="js/watchlist.js"></script>
 <script src="js/news.js"></script>
 <script src="js/scanner.js"></script>
+
+<script src="js/chart.js"></script>
 <script src="js/ticker.js"></script>
+
 <script src="js/patterns.js"></script>
 <script src="js/market-pulse.js"></script>
-
-<!-- Ticker search -->
 <script src="js/search.js"></script>
 
-<!-- Load controller last -->
 <script src="js/app.js"></script>
 
 </body>
