@@ -1,46 +1,99 @@
 /* =========================================================
-   MARKET SCANNER
-   Data source: StockScanner.marketService
+   STOCK SCANNER — LIVE MARKET SCANNER
+
+   Data source:
+   StockScanner.marketService.getMovers()
+
+   NO DEMO DATA.
    ========================================================= */
+
+window.StockScanner =
+    window.StockScanner || {};
+
 
 StockScanner.scanner = {
 
     stocks: [],
 
+    filteredStocks: [],
+
+
     settings: {
-        minimumPrice: null,
-        maximumPrice: null,
-        minimumVolume: null,
-        minimumRelativeVolume: null,
-        minimumMove: null,
-        maximumSpread: null
+
+        minimumPrice:
+            null,
+
+        maximumPrice:
+            null,
+
+        minimumVolume:
+            null,
+
+        minimumRelativeVolume:
+            null,
+
+        minimumMove:
+            null,
+
+        maximumSpread:
+            null
+
     },
 
+
+    /* =====================================================
+       INITIALIZE
+    ===================================================== */
 
     async init() {
 
         this.bindSettings();
+
+        this.updateSummary();
 
         await this.refresh();
 
     },
 
 
+    /* =====================================================
+       REFRESH LIVE SCANNER
+    ===================================================== */
+
     async refresh() {
+
+        this.setStatus(
+            "LOADING"
+        );
+
+
+        this.renderLoading();
+
 
         try {
 
             const stocks =
-                await StockScanner.marketService.getMovers();
+                await StockScanner
+                    .marketService
+                    .getMovers({
+
+                        top: 25
+
+                    });
+
 
             this.stocks =
                 Array.isArray(stocks)
                     ? stocks
                     : [];
 
+
             this.applyFilters();
 
-            this.setStatus("READY");
+
+            this.setStatus(
+                "LIVE"
+            );
 
         }
         catch (error) {
@@ -50,16 +103,211 @@ StockScanner.scanner = {
                 error
             );
 
-            this.setStatus("ERROR");
+
+            this.stocks = [];
+
+            this.filteredStocks = [];
+
+
+            this.setStatus(
+                "ERROR"
+            );
+
 
             this.renderError(
-                error.message
+
+                error?.message ||
+                "Live scanner unavailable."
+
             );
 
         }
 
     },
 
+
+    /* =====================================================
+       FILTERS
+    ===================================================== */
+
+    applyFilters() {
+
+        const settings =
+            this.settings;
+
+
+        let results =
+            [...this.stocks];
+
+
+        if (
+            settings.minimumPrice !== null
+        ) {
+
+            results =
+                results.filter(
+                    stock =>
+
+                        this.numberOrNull(
+                            stock.price
+                        ) !== null &&
+
+                        Number(
+                            stock.price
+                        ) >=
+                        settings.minimumPrice
+                );
+
+        }
+
+
+        if (
+            settings.maximumPrice !== null
+        ) {
+
+            results =
+                results.filter(
+                    stock =>
+
+                        this.numberOrNull(
+                            stock.price
+                        ) !== null &&
+
+                        Number(
+                            stock.price
+                        ) <=
+                        settings.maximumPrice
+                );
+
+        }
+
+
+        if (
+            settings.minimumVolume !== null
+        ) {
+
+            results =
+                results.filter(
+                    stock =>
+
+                        this.numberOrNull(
+                            stock.volume
+                        ) !== null &&
+
+                        Number(
+                            stock.volume
+                        ) >=
+                        settings.minimumVolume
+                );
+
+        }
+
+
+        /*
+         RVOL is not yet calculated.
+
+         If the user activates an RVOL filter, stocks
+         without actual RVOL data correctly fail it.
+        */
+
+        if (
+            settings.minimumRelativeVolume !==
+            null
+        ) {
+
+            results =
+                results.filter(
+                    stock => {
+
+                        const rvol =
+                            this.numberOrNull(
+                                stock.relativeVolume
+                            );
+
+
+                        return (
+                            rvol !== null &&
+                            rvol >=
+                            settings.minimumRelativeVolume
+                        );
+
+                    }
+                );
+
+        }
+
+
+        if (
+            settings.minimumMove !== null
+        ) {
+
+            results =
+                results.filter(
+                    stock => {
+
+                        const move =
+                            this.numberOrNull(
+                                stock.changePercent
+                            );
+
+
+                        return (
+                            move !== null &&
+                            Math.abs(move) >=
+                            settings.minimumMove
+                        );
+
+                    }
+                );
+
+        }
+
+
+        /*
+         This setting existed previously but was not
+         actually being applied.
+        */
+
+        if (
+            settings.maximumSpread !== null
+        ) {
+
+            results =
+                results.filter(
+                    stock => {
+
+                        const spread =
+                            this.numberOrNull(
+                                stock.spreadPercent
+                            );
+
+
+                        return (
+                            spread !== null &&
+                            spread <=
+                            settings.maximumSpread
+                        );
+
+                    }
+                );
+
+        }
+
+
+        this.filteredStocks =
+            results;
+
+
+        this.render(
+            results
+        );
+
+    },
+
+
+    /* =====================================================
+       RENDER
+    ===================================================== */
 
     render(stocks) {
 
@@ -68,107 +316,208 @@ StockScanner.scanner = {
                 "scannerResults"
             );
 
+
+        if (!body) {
+            return;
+        }
+
+
         body.innerHTML = "";
 
 
         if (!stocks.length) {
 
             body.innerHTML = `
+
                 <tr class="empty-row">
+
                     <td colspan="8">
-                        No stocks match current scan settings.
+                        No live stocks match the current scan settings.
                     </td>
+
                 </tr>
             `;
+
 
             return;
 
         }
 
 
-        stocks.forEach(stock => {
+        stocks.forEach(
+            stock => {
 
-            const row =
-                document.createElement("tr");
-
-            row.dataset.symbol =
-                stock.symbol;
-
-
-            row.innerHTML = `
-
-                <td>
-                    <strong>
-                        ${stock.symbol}
-                    </strong>
-                </td>
-
-                <td>
-                    $${Number(stock.price).toFixed(2)}
-                </td>
-
-                <td class="
-                    ${
-                        stock.changePercent >= 0
-                            ? "positive"
-                            : "negative"
-                    }
-                ">
-                    ${
-                        stock.changePercent >= 0
-                            ? "+"
-                            : ""
-                    }
-                    ${Number(
-                        stock.changePercent
-                    ).toFixed(2)}%
-                </td>
-
-                <td>
-                    ${
-                        stock.relativeVolume != null
-                            ? Number(
-                                stock.relativeVolume
-                              ).toFixed(1) + "×"
-                            : "---"
-                    }
-                </td>
-
-                <td>
-                    ${this.formatVolume(
-                        stock.volume
-                    )}
-                </td>
-
-                <td class="accent">
-                    ${stock.setup || "---"}
-                </td>
-
-                <td>
-                    ${stock.catalyst || "---"}
-                </td>
-
-                <td>
-                    ${stock.setupStatus || "---"}
-                </td>
-            `;
-
-
-            row.addEventListener(
-                "click",
-                () => {
-
-                    StockScanner.ticker.select(
-                        stock.symbol
+                const row =
+                    document.createElement(
+                        "tr"
                     );
 
-                }
+
+                row.dataset.symbol =
+                    stock.symbol;
+
+
+                const price =
+                    this.numberOrNull(
+                        stock.price
+                    );
+
+
+                const change =
+                    this.numberOrNull(
+                        stock.changePercent
+                    );
+
+
+                const rvol =
+                    this.numberOrNull(
+                        stock.relativeVolume
+                    );
+
+
+                row.innerHTML = `
+
+                    <td>
+                        <strong>
+                            ${this.escapeHTML(stock.symbol)}
+                        </strong>
+                    </td>
+
+                    <td>
+                        ${
+                            price !== null
+                                ? "$" +
+                                  price.toFixed(2)
+                                : "---"
+                        }
+                    </td>
+
+                    <td class="${
+                        change === null
+                            ? ""
+                            : change >= 0
+                                ? "positive"
+                                : "negative"
+                    }">
+
+                        ${
+                            change !== null
+                                ? (
+                                    change >= 0
+                                        ? "+"
+                                        : ""
+                                  ) +
+                                  change.toFixed(2) +
+                                  "%"
+                                : "---"
+                        }
+
+                    </td>
+
+                    <td>
+
+                        ${
+                            rvol !== null
+                                ? rvol.toFixed(1) +
+                                  "×"
+                                : "---"
+                        }
+
+                    </td>
+
+                    <td>
+
+                        ${this.formatVolume(
+                            stock.volume
+                        )}
+
+                    </td>
+
+                    <td class="accent">
+
+                        ${this.escapeHTML(
+                            stock.setup ||
+                            "Analyzing"
+                        )}
+
+                    </td>
+
+                    <td>
+
+                        ${this.escapeHTML(
+                            stock.catalyst ||
+                            "---"
+                        )}
+
+                    </td>
+
+                    <td>
+
+                        ${this.escapeHTML(
+                            stock.setupStatus ||
+                            "LIVE"
+                        )}
+
+                    </td>
+                `;
+
+
+                row.addEventListener(
+                    "click",
+                    () => {
+
+                        if (
+                            StockScanner.ticker
+                        ) {
+
+                            StockScanner.ticker
+                                .select(
+                                    stock.symbol
+                                );
+
+                        }
+
+                    }
+                );
+
+
+                body.appendChild(
+                    row
+                );
+
+            }
+        );
+
+    },
+
+
+    /* =====================================================
+       LOADING / ERROR
+    ===================================================== */
+
+    renderLoading() {
+
+        const body =
+            document.getElementById(
+                "scannerResults"
             );
 
 
-            body.appendChild(row);
+        if (!body) {
+            return;
+        }
 
-        });
+
+        body.innerHTML = `
+
+            <tr class="empty-row">
+
+                <td colspan="8">
+                    Loading live market scanner...
+                </td>
+
+            </tr>
+        `;
 
     },
 
@@ -180,17 +529,30 @@ StockScanner.scanner = {
                 "scannerResults"
             );
 
+
+        if (!body) {
+            return;
+        }
+
+
         body.innerHTML = `
+
             <tr class="empty-row">
+
                 <td colspan="8">
-                    Scanner unavailable:
-                    ${message}
+                    LIVE SCANNER UNAVAILABLE:
+                    ${this.escapeHTML(message)}
                 </td>
+
             </tr>
         `;
 
     },
 
+
+    /* =====================================================
+       SETTINGS
+    ===================================================== */
 
     bindSettings() {
 
@@ -198,6 +560,12 @@ StockScanner.scanner = {
             document.getElementById(
                 "applyScanSettings"
             );
+
+
+        if (!button) {
+            return;
+        }
+
 
         button.addEventListener(
             "click",
@@ -207,27 +575,21 @@ StockScanner.scanner = {
 
                 this.applyFilters();
 
-                StockScanner.app.closeDrawers();
+
+                if (
+                    StockScanner.app &&
+                    typeof StockScanner.app
+                        .closeDrawers ===
+                        "function"
+                ) {
+
+                    StockScanner.app
+                        .closeDrawers();
+
+                }
 
             }
         );
-
-    },
-
-
-    readNumber(id) {
-
-        const element =
-            document.getElementById(id);
-
-        const value =
-            element.value;
-
-        if (value === "") {
-            return null;
-        }
-
-        return Number(value);
 
     },
 
@@ -239,127 +601,97 @@ StockScanner.scanner = {
                 "minimumPrice"
             );
 
+
         this.settings.maximumPrice =
             this.readNumber(
                 "maximumPrice"
             );
+
 
         this.settings.minimumVolume =
             this.readNumber(
                 "minimumVolume"
             );
 
+
         this.settings.minimumRelativeVolume =
             this.readNumber(
                 "minimumRelativeVolume"
             );
+
 
         this.settings.minimumMove =
             this.readNumber(
                 "minimumMove"
             );
 
+
         this.settings.maximumSpread =
             this.readNumber(
                 "maximumSpread"
             );
+
 
         this.updateSummary();
 
     },
 
 
-    applyFilters() {
+    readNumber(id) {
 
-        let results = [
-            ...this.stocks
-        ];
-
-        const s =
-            this.settings;
+        const element =
+            document.getElementById(
+                id
+            );
 
 
-        if (s.minimumPrice !== null) {
-
-            results =
-                results.filter(
-                    stock =>
-                        Number(stock.price) >=
-                        s.minimumPrice
-                );
-
+        if (!element) {
+            return null;
         }
 
 
-        if (s.maximumPrice !== null) {
-
-            results =
-                results.filter(
-                    stock =>
-                        Number(stock.price) <=
-                        s.maximumPrice
-                );
-
-        }
-
-
-        if (s.minimumVolume !== null) {
-
-            results =
-                results.filter(
-                    stock =>
-                        Number(stock.volume) >=
-                        s.minimumVolume
-                );
-
-        }
+        const value =
+            element.value;
 
 
         if (
-            s.minimumRelativeVolume !== null
+            value === ""
         ) {
 
-            results =
-                results.filter(
-                    stock =>
-                        Number(
-                            stock.relativeVolume
-                        ) >=
-                        s.minimumRelativeVolume
-                );
+            return null;
 
         }
 
 
-        if (s.minimumMove !== null) {
-
-            results =
-                results.filter(
-                    stock =>
-                        Math.abs(
-                            Number(
-                                stock.changePercent
-                            )
-                        ) >=
-                        s.minimumMove
-                );
-
-        }
+        const number =
+            Number(value);
 
 
-        this.render(results);
+        return Number.isFinite(number)
+            ? number
+            : null;
 
     },
 
 
     updateSummary() {
 
+        const summary =
+            document.getElementById(
+                "activeScanSummary"
+            );
+
+
+        if (!summary) {
+            return;
+        }
+
+
         const s =
             this.settings;
 
-        document.getElementById(
-            "activeScanSummary"
-        ).innerHTML = `
+
+        summary.innerHTML = `
 
             <span>
                 Price:
@@ -370,26 +702,22 @@ StockScanner.scanner = {
 
             <span>
                 RelVol:
-                ${
-                    s.minimumRelativeVolume
-                    ?? "ANY"
-                }
+                ${s.minimumRelativeVolume ?? "ANY"}
             </span>
 
             <span>
                 Volume:
-                ${
-                    s.minimumVolume
-                    ?? "ANY"
-                }
+                ${s.minimumVolume ?? "ANY"}
             </span>
 
             <span>
                 Move:
-                ${
-                    s.minimumMove
-                    ?? "ANY"
-                }%
+                ${s.minimumMove ?? "ANY"}%
+            </span>
+
+            <span>
+                Spread:
+                ${s.maximumSpread ?? "ANY"}%
             </span>
 
             <span>
@@ -400,33 +728,9 @@ StockScanner.scanner = {
     },
 
 
-    formatVolume(volume) {
-
-        volume =
-            Number(volume || 0);
-
-        if (volume >= 1e9) {
-            return (
-                volume / 1e9
-            ).toFixed(1) + "B";
-        }
-
-        if (volume >= 1e6) {
-            return (
-                volume / 1e6
-            ).toFixed(1) + "M";
-        }
-
-        if (volume >= 1e3) {
-            return (
-                volume / 1e3
-            ).toFixed(1) + "K";
-        }
-
-        return String(volume);
-
-    },
-
+    /* =====================================================
+       STATUS
+    ===================================================== */
 
     setStatus(status) {
 
@@ -435,28 +739,162 @@ StockScanner.scanner = {
                 "#systemStatus span"
             );
 
-        elements.forEach(element => {
 
-            if (
-                element.textContent
-                    .trim()
-                    .startsWith("SCANNER")
-            ) {
+        elements.forEach(
+            element => {
+
+                if (
+                    !element.textContent
+                        .trim()
+                        .startsWith(
+                            "SCANNER"
+                        )
+                ) {
+
+                    return;
+
+                }
+
 
                 const indicator =
-                    element.querySelector("b");
+                    element.querySelector(
+                        "b"
+                    );
+
+
+                if (!indicator) {
+                    return;
+                }
+
 
                 indicator.textContent =
                     status;
 
+
                 indicator.className =
-                    status === "READY"
+                    (
+                        status === "LIVE" ||
+                        status === "READY"
+                    )
                         ? "status-ready"
                         : "status-off";
 
             }
+        );
 
-        });
+    },
+
+
+    /* =====================================================
+       HELPERS
+    ===================================================== */
+
+    numberOrNull(value) {
+
+        if (
+            value === undefined ||
+            value === null ||
+            value === ""
+        ) {
+
+            return null;
+
+        }
+
+
+        const number =
+            Number(value);
+
+
+        return Number.isFinite(number)
+            ? number
+            : null;
+
+    },
+
+
+    formatVolume(volume) {
+
+        const number =
+            this.numberOrNull(
+                volume
+            );
+
+
+        if (
+            number === null
+        ) {
+
+            return "---";
+
+        }
+
+
+        if (
+            number >= 1e9
+        ) {
+
+            return (
+                number / 1e9
+            ).toFixed(2) + "B";
+
+        }
+
+
+        if (
+            number >= 1e6
+        ) {
+
+            return (
+                number / 1e6
+            ).toFixed(2) + "M";
+
+        }
+
+
+        if (
+            number >= 1e3
+        ) {
+
+            return (
+                number / 1e3
+            ).toFixed(1) + "K";
+
+        }
+
+
+        return Math.round(
+            number
+        ).toLocaleString();
+
+    },
+
+
+    escapeHTML(value) {
+
+        return String(
+            value ?? ""
+        )
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
 
     }
 
