@@ -1,18 +1,28 @@
 /* =========================================================
-   MARKET INTELLIGENCE FEED
-   Data source: StockScanner.marketService
+   STOCK SCANNER — LIVE MARKET INTELLIGENCE
    ========================================================= */
+
+window.StockScanner =
+    window.StockScanner || {};
+
 
 StockScanner.news = {
 
-    items: [],
+    items:
+        [],
 
 
     async init() {
 
-        document
-            .getElementById("newsFilter")
-            .addEventListener(
+        const filter =
+            document.getElementById(
+                "newsFilter"
+            );
+
+
+        if (filter) {
+
+            filter.addEventListener(
                 "change",
                 event => {
 
@@ -22,6 +32,8 @@ StockScanner.news = {
 
                 }
             );
+
+        }
 
 
         await this.refresh();
@@ -34,22 +46,29 @@ StockScanner.news = {
         try {
 
             const items =
-                await StockScanner.marketService
-                    .getMarketNews();
+                await StockScanner
+                    .marketService
+                    .getMarketNews({
+
+                        limit:
+                            30
+
+                    });
+
 
             this.items =
                 Array.isArray(items)
                     ? items
                     : [];
 
+
             this.render(
                 this.items
             );
 
+
             this.setStatus(
-                StockScanner.marketService.isLive()
-                    ? "LIVE"
-                    : "DEMO"
+                "LIVE"
             );
 
         }
@@ -60,10 +79,19 @@ StockScanner.news = {
                 error
             );
 
-            this.setStatus("ERROR");
+
+            this.items =
+                [];
+
+
+            this.setStatus(
+                "ERROR"
+            );
+
 
             this.renderError(
-                error.message
+                error?.message ||
+                "Live news unavailable."
             );
 
         }
@@ -78,89 +106,126 @@ StockScanner.news = {
                 "newsFeed"
             );
 
-        feed.innerHTML = "";
+
+        if (!feed) {
+            return;
+        }
+
+
+        feed.innerHTML =
+            "";
 
 
         if (!items.length) {
 
             feed.innerHTML = `
-                <article class="news-item">
-                    No stories available.
+
+                <article class="news-item placeholder">
+
+                    No live stories available.
+
                 </article>
             `;
+
 
             return;
 
         }
 
 
-        items.forEach(item => {
+        items.forEach(
+            item => {
 
-            const article =
-                document.createElement(
-                    "article"
-                );
-
-            article.className =
-                "news-item";
+                const article =
+                    document.createElement(
+                        "article"
+                    );
 
 
-            article.innerHTML = `
-
-                <div class="news-meta">
-
-                    <span>
-                        ${item.ticker || "MARKET"}
-                        •
-                        ${(item.type || "news")
-                            .toUpperCase()}
-                    </span>
-
-                    <time>
-                        ${item.time || ""}
-                    </time>
-
-                </div>
-
-                <h3>
-                    ${item.headline || ""}
-                </h3>
-
-                <p>
-                    ${item.summary || ""}
-                </p>
-            `;
+                article.className =
+                    "news-item";
 
 
-            if (
-                item.ticker &&
-                item.ticker !== "MARKET"
-            ) {
+                const ticker =
+                    item.ticker ||
+                    "MARKET";
 
-                article.addEventListener(
-                    "click",
-                    () => {
 
-                        StockScanner.ticker.select(
-                            item.ticker
-                        );
+                article.innerHTML = `
 
-                    }
+                    <div class="news-meta">
+
+                        <span>
+                            ${this.escapeHTML(ticker)}
+                            •
+                            ${this.escapeHTML(
+                                String(
+                                    item.type ||
+                                    "news"
+                                ).toUpperCase()
+                            )}
+                        </span>
+
+                        <time>
+                            ${this.escapeHTML(
+                                item.time ||
+                                ""
+                            )}
+                        </time>
+
+                    </div>
+
+                    <h3>
+                        ${this.escapeHTML(
+                            item.headline ||
+                            ""
+                        )}
+                    </h3>
+
+                    <p>
+                        ${this.escapeHTML(
+                            item.summary ||
+                            ""
+                        )}
+                    </p>
+                `;
+
+
+                if (
+                    ticker !==
+                    "MARKET"
+                ) {
+
+                    article.addEventListener(
+                        "click",
+                        () => {
+
+                            StockScanner.ticker
+                                .select(
+                                    ticker
+                                );
+
+                        }
+                    );
+
+                }
+
+
+                feed.appendChild(
+                    article
                 );
 
             }
-
-
-            feed.appendChild(article);
-
-        });
+        );
 
     },
 
 
     filter(type) {
 
-        if (type === "all") {
+        if (
+            type === "all"
+        ) {
 
             this.render(
                 this.items
@@ -172,10 +237,13 @@ StockScanner.news = {
 
 
         this.render(
+
             this.items.filter(
                 item =>
-                    item.type === type
+                    item.type ===
+                    type
             )
+
         );
 
     },
@@ -183,18 +251,29 @@ StockScanner.news = {
 
     renderError(message) {
 
-        document.getElementById(
-            "newsFeed"
-        ).innerHTML = `
+        const feed =
+            document.getElementById(
+                "newsFeed"
+            );
 
-            <article class="news-item">
+
+        if (!feed) {
+            return;
+        }
+
+
+        feed.innerHTML = `
+
+            <article class="news-item placeholder">
+
                 <h3>
                     News feed unavailable
                 </h3>
 
                 <p>
-                    ${message}
+                    ${this.escapeHTML(message)}
                 </p>
+
             </article>
         `;
 
@@ -208,28 +287,74 @@ StockScanner.news = {
                 "#systemStatus span"
             );
 
-        elements.forEach(element => {
 
-            if (
-                element.textContent
-                    .trim()
-                    .startsWith("NEWS")
-            ) {
+        elements.forEach(
+            element => {
+
+                if (
+                    !element.textContent
+                        .trim()
+                        .startsWith(
+                            "NEWS"
+                        )
+                ) {
+
+                    return;
+
+                }
+
 
                 const indicator =
-                    element.querySelector("b");
+                    element.querySelector(
+                        "b"
+                    );
+
+
+                if (!indicator) {
+                    return;
+                }
+
 
                 indicator.textContent =
                     status;
 
+
                 indicator.className =
-                    status === "ERROR"
-                        ? "status-off"
-                        : "status-ready";
+                    status === "LIVE"
+                        ? "status-ready"
+                        : "status-off";
 
             }
+        );
 
-        });
+    },
+
+
+    escapeHTML(value) {
+
+        return String(
+            value ?? ""
+        )
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
 
     }
 
